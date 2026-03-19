@@ -1,130 +1,35 @@
-# ─────────────────────────────────────────────────────────────────
 # LANGCHAIN FRAMEWORK
-# LangChain is the "plumbing" framework that connects all RAG pieces.
-# It defines standard interfaces so we can swap out components
-# (e.g., swap OpenAI for Groq) without rewriting the whole pipeline.
-# ─────────────────────────────────────────────────────────────────
-
-# Core LangChain — base classes, Document objects, chain abstractions
 langchain==0.2.16
-
-# Community integrations — extra loaders, retrievers, vector stores
-# Contains: PyPDFLoader, Docx2txtLoader, BM25Retriever wrappers
 langchain-community==0.2.16
-
-# OpenAI integration for LangChain — connects LangChain to OpenAI API
-# Provides: ChatOpenAI, OpenAIEmbeddings classes
 langchain-openai==0.1.23
 
-# ─────────────────────────────────────────────────────────────────
 # VECTOR DATABASE
-# ─────────────────────────────────────────────────────────────────
-
-# ChromaDB — local vector database that runs entirely on your machine.
-# Stores embeddings as files in chroma_db/ folder.
-# No server required, no cloud account, completely free.
-# Chosen over Pinecone (cloud, paid) and Weaviate (complex setup)
-# because it's perfect for local development and learning.
 chromadb==0.5.5
 
-# ─────────────────────────────────────────────────────────────────
 # RETRIEVAL
-# ─────────────────────────────────────────────────────────────────
-
-# rank-bm25 — pure Python implementation of BM25Okapi algorithm.
-# Lightweight, no external dependencies, easy to understand.
-# Alternative: Elasticsearch (overkill for our scale).
 rank-bm25==0.2.2
-
-# sentence-transformers — HuggingFace library for:
-# 1. FREE local embeddings (all-MiniLM-L6-v2, 384 dimensions)
-# 2. Cross-encoder reranking (ms-marco-MiniLM-L-6-v2)
-# This one library enables our reranker AND local embeddings.
 sentence-transformers==3.0.1
 
-# ─────────────────────────────────────────────────────────────────
 # DOCUMENT LOADING
-# ─────────────────────────────────────────────────────────────────
-
-# pypdf — reads PDF files and extracts text page by page.
-# Preserves page numbers so we can cite "Page 5 of report.pdf".
-# Alternative: pdfminer (more complex), pymupdf (faster but GPL license).
 pypdf==4.3.1
-
-# python-docx — reads Microsoft Word .docx files.
-# Extracts paragraphs, headings, tables from Word documents.
 python-docx==1.1.2
+unstructured>=0.16.19
 
-# unstructured — advanced document parser for complex layouts.
-# Handles: tables, multi-column PDFs, headers/footers.
-# We use this as a fallback when pypdf fails on complex PDFs.
-unstructured==0.15.0
-
-# ─────────────────────────────────────────────────────────────────
 # LLM PROVIDERS
-# ─────────────────────────────────────────────────────────────────
-
-# openai — official OpenAI Python SDK.
-# Used for: GPT-3.5-turbo, GPT-4o-mini (the LLM that generates answers)
-# Also used for: text-embedding-3-small (if using paid embeddings)
 openai==1.40.0
-
-# groq — Groq Cloud API SDK.
-# Groq offers FREE access to llama3-70b-8192 with very fast inference.
-# Speed advantage: Groq uses custom LPU hardware, not GPUs.
-# Perfect for development — save your OpenAI credits.
 groq==0.9.0
 
-# ─────────────────────────────────────────────────────────────────
 # WEB UI
-# ─────────────────────────────────────────────────────────────────
-
-# streamlit — builds interactive web apps with pure Python.
-# No HTML/CSS/JavaScript required. Run with: streamlit run app.py
-# A browser tab opens automatically at localhost:8501.
 streamlit==1.37.0
 
-# ─────────────────────────────────────────────────────────────────
 # UTILITIES
-# ─────────────────────────────────────────────────────────────────
-
-# python-dotenv — reads key=value pairs from .env file.
-# Loads them into os.environ so code can access them with os.getenv().
-# Critical: keeps API keys out of source code.
 python-dotenv==1.0.1
-
-# tiktoken — OpenAI's tokenizer library.
-# Counts tokens BEFORE sending to API so we never exceed context limits.
-# Also used to estimate costs (# tokens × price per token).
 tiktoken==0.7.0
-
-# pandas — data manipulation library.
-# We use it for: loading CSV documents, handling eval datasets.
-pandas==2.2.2
-
-# numpy — numerical computing.
-# We use it for: RRF score calculations, cosine similarity math.
-numpy==1.26.4
-
-# pydantic — data validation using Python type hints.
-# We use it to define strict data classes (CitationRef, RAGResponse).
-# Validates that all required fields exist and have correct types.
+pandas==2.2.3
+numpy>=1.26.4,<2.0.0
 pydantic==2.8.2
-
-# loguru — beautiful, easy logging library.
-# Better than Python's built-in logging: color-coded output, no config needed.
-# We log every major operation with timing so we can debug performance.
 loguru==0.7.2
 
-# ─────────────────────────────────────────────────────────────────
 # EVALUATION
-# ─────────────────────────────────────────────────────────────────
-
-# ragas — RAG evaluation framework by Exploding Gradients.
-# Computes: faithfulness, answer relevancy, context recall, context precision.
-# Used in our CI quality gate to block bad code changes.
 ragas==0.1.14
-
-# datasets — HuggingFace datasets library.
-# Required by ragas internally for eval dataset handling.
 datasets==2.20.0
