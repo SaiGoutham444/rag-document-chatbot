@@ -538,7 +538,7 @@ def build_or_load_bm25(
 
     # Try loading from disk first (faster than rebuilding)
     if retriever.index_exists_on_disk(source_name):
-        success = retriever.load_index(source_name)
+        success = retriever.load_index(source_name) 
         if success:
             logger.info(f"BM25 index loaded from disk for '{source_name}'")
             return retriever
