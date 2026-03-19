@@ -58,7 +58,7 @@ EMBEDDING_PROVIDER: str  = os.getenv("EMBEDDING_PROVIDER", "local")
 # ─────────────────────────────────────────────────────────────────
 
 OPENAI_LLM_MODEL: str       = "gpt-4o-mini"
-GROQ_LLM_MODEL: str         = "llama3-70b-8192"
+GROQ_LLM_MODEL: str         = "llama-3.3-70b-versatile"
 OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
 LOCAL_EMBEDDING_MODEL: str  = "all-MiniLM-L6-v2"
 RERANKER_MODEL: str         = "cross-encoder/ms-marco-MiniLM-L-6-v2"
@@ -99,7 +99,7 @@ LLM_MAX_TOKENS: int    = 1024
 
 CONTEXT_WINDOW_LIMITS: dict = {
     "gpt-4o-mini"       : 128000,
-    "llama3-70b-8192"   : 8192,
+    "llama-3.3-70b-versatile": 128000,
     "mixtral-8x7b-32768": 32768,
 }
 
