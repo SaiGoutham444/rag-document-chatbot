@@ -7,25 +7,31 @@ from loguru import logger
 # Read from Streamlit secrets if running on cloud
 try:
     import streamlit as st
+
     if hasattr(st, "secrets") and st.secrets:
-        os.environ.setdefault("GROQ_API_KEY",       st.secrets.get("GROQ_API_KEY", ""))
-        os.environ.setdefault("OPENAI_API_KEY",      st.secrets.get("OPENAI_API_KEY", ""))
-        os.environ.setdefault("LLM_PROVIDER",        st.secrets.get("LLM_PROVIDER", "groq"))
-        os.environ.setdefault("EMBEDDING_PROVIDER",  st.secrets.get("EMBEDDING_PROVIDER", "local"))
+        os.environ.setdefault("GROQ_API_KEY", st.secrets.get("GROQ_API_KEY", ""))
+        os.environ.setdefault("OPENAI_API_KEY", st.secrets.get("OPENAI_API_KEY", ""))
+        os.environ.setdefault("LLM_PROVIDER", st.secrets.get("LLM_PROVIDER", "groq"))
+        os.environ.setdefault(
+            "EMBEDDING_PROVIDER", st.secrets.get("EMBEDDING_PROVIDER", "local")
+        )
 except Exception:
     pass  # Not running on Streamlit Cloud
+
 
 # ── Read Streamlit Cloud secrets into environment ──────────────
 def _load_streamlit_secrets():
     """Loads Streamlit Cloud secrets into os.environ if available."""
     try:
         import streamlit as st
+
         if hasattr(st, "secrets"):
             for key, val in st.secrets.items():
                 if isinstance(val, str):
                     os.environ.setdefault(key, val)
     except Exception:
         pass  # Not on Streamlit Cloud or streamlit not imported yet
+
 
 _load_streamlit_secrets()
 # ─────────────────────────────────────────────────────────────────

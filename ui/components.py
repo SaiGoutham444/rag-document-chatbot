@@ -19,6 +19,7 @@ from src.rag_pipeline import RAGResponse, ProcessingResult
 # CSS LOADER
 # ══════════════════════════════════════════════════════════════════
 
+
 def load_css():
     """Injects the custom CSS stylesheet into the Streamlit app."""
     css_path = Path(__file__).parent / "styles.css"
@@ -31,6 +32,7 @@ def load_css():
 # ══════════════════════════════════════════════════════════════════
 # SIDEBAR COMPONENTS
 # ══════════════════════════════════════════════════════════════════
+
 
 def render_sidebar_header():
     """Renders the branded app title in the sidebar."""
@@ -77,11 +79,11 @@ def render_file_uploader() -> Optional[Any]:
     )
 
     uploaded_file = st.sidebar.file_uploader(
-        label       = "Choose a file",
-        type        = ["pdf", "docx", "txt", "csv", "html"],
-        help        = "PDF · Word · TXT · CSV · HTML  (max 50 MB)",
-        key         = "file_uploader",
-        label_visibility = "collapsed",
+        label="Choose a file",
+        type=["pdf", "docx", "txt", "csv", "html"],
+        help="PDF · Word · TXT · CSV · HTML  (max 50 MB)",
+        key="file_uploader",
+        label_visibility="collapsed",
     )
     return uploaded_file
 
@@ -156,25 +158,25 @@ def render_settings() -> Dict[str, Any]:
 
     retrieval_top_k = st.sidebar.slider(
         "Retrieval Top-K",
-        min_value = 5,
-        max_value = 30,
-        value     = 20,
-        step      = 5,
-        help      = "Chunks retrieved before reranking",
+        min_value=5,
+        max_value=30,
+        value=20,
+        step=5,
+        help="Chunks retrieved before reranking",
     )
 
     rerank_top_k = st.sidebar.slider(
         "Rerank Top-K",
-        min_value = 2,
-        max_value = 8,
-        value     = 3,
-        step      = 1,
-        help      = "Chunks kept after reranking",
+        min_value=2,
+        max_value=8,
+        value=3,
+        step=1,
+        help="Chunks kept after reranking",
     )
 
     return {
         "retrieval_top_k": retrieval_top_k,
-        "rerank_top_k"   : rerank_top_k,
+        "rerank_top_k": rerank_top_k,
     }
 
 
@@ -183,8 +185,8 @@ def render_clear_button() -> bool:
     st.sidebar.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
     return st.sidebar.button(
         "↺  Clear Conversation",
-        use_container_width = True,
-        help = "Clear chat history (document stays loaded)",
+        use_container_width=True,
+        help="Clear chat history (document stays loaded)",
     )
 
 
@@ -208,9 +210,13 @@ def render_pipeline_status(status: Dict[str, Any]):
 
     components = [
         ("Embeddings", status.get("embedding_provider", "—"), True),
-        ("LLM",        status.get("llm_provider", "—"),        True),
-        ("Reranker",   "ms-marco",                             status.get("reranker_loaded", False)),
-        ("Document",   status.get("current_source", "none"),   status.get("document_loaded", False)),
+        ("LLM", status.get("llm_provider", "—"), True),
+        ("Reranker", "ms-marco", status.get("reranker_loaded", False)),
+        (
+            "Document",
+            status.get("current_source", "none"),
+            status.get("document_loaded", False),
+        ),
     ]
 
     rows = ""
@@ -240,6 +246,7 @@ def render_pipeline_status(status: Dict[str, Any]):
 # WELCOME SCREEN
 # ══════════════════════════════════════════════════════════════════
 
+
 def render_welcome_message():
     """Renders the welcome screen using pure Streamlit components."""
     st.markdown("---")
@@ -261,9 +268,11 @@ def render_welcome_message():
         st.markdown("---")
         st.info("👈 Upload a document in the sidebar to begin")
 
+
 # ══════════════════════════════════════════════════════════════════
 # CHAT HEADER
 # ══════════════════════════════════════════════════════════════════
+
 
 def render_chat_header(doc_name: str, settings: Dict):
     """Renders the chat area header with document name and settings."""
@@ -313,6 +322,7 @@ def render_chat_header(doc_name: str, settings: Dict):
 # MESSAGE RENDERING
 # ══════════════════════════════════════════════════════════════════
 
+
 def render_user_message(content: str):
     """Renders a user chat message."""
     with st.chat_message("user"):
@@ -325,11 +335,11 @@ def render_user_message(content: str):
 
 def _highlight_citations(text: str) -> str:
     """Wraps [SOURCE: ...] tags in styled spans."""
-    pattern = re.compile(r'(\[SOURCE:[^\]]+\])', re.IGNORECASE)
+    pattern = re.compile(r"(\[SOURCE:[^\]]+\])", re.IGNORECASE)
     return pattern.sub(
         r'<span style="font-family: JetBrains Mono, monospace; font-size: 0.68rem; '
-        r'background: rgba(0,212,255,0.1); color: #00d4ff; padding: 1px 5px; '
-        r'border-radius: 3px; border: 1px solid rgba(0,212,255,0.2); '
+        r"background: rgba(0,212,255,0.1); color: #00d4ff; padding: 1px 5px; "
+        r"border-radius: 3px; border: 1px solid rgba(0,212,255,0.2); "
         r'white-space: nowrap;">\1</span>',
         text,
     )
@@ -344,7 +354,7 @@ def render_assistant_message(response: RAGResponse, message_id: int):
         st.markdown(
             f'<div style="color: #e8edf5; font-family: Inter, sans-serif; '
             f'font-size: 0.92rem; line-height: 1.7; margin-bottom: 1rem;">'
-            f'{highlighted}</div>',
+            f"{highlighted}</div>",
             unsafe_allow_html=True,
         )
 
@@ -352,19 +362,19 @@ def render_assistant_message(response: RAGResponse, message_id: int):
         if response.citation_valid:
             badge_html = (
                 f'<span style="font-family: JetBrains Mono, monospace; '
-                f'font-size: 0.68rem; background: rgba(0,230,118,0.1); '
-                f'color: #00e676; border: 1px solid rgba(0,230,118,0.25); '
+                f"font-size: 0.68rem; background: rgba(0,230,118,0.1); "
+                f"color: #00e676; border: 1px solid rgba(0,230,118,0.25); "
                 f'padding: 3px 10px; border-radius: 4px; letter-spacing: 0.04em;">'
-                f'✓ Citations valid · {response.coverage_score:.0%} coverage · '
+                f"✓ Citations valid · {response.coverage_score:.0%} coverage · "
                 f'{len(response.citations)} source{"s" if len(response.citations) != 1 else ""}</span>'
             )
         else:
             badge_html = (
                 f'<span style="font-family: JetBrains Mono, monospace; '
-                f'font-size: 0.68rem; background: rgba(245,166,35,0.1); '
-                f'color: #f5a623; border: 1px solid rgba(245,166,35,0.25); '
+                f"font-size: 0.68rem; background: rgba(245,166,35,0.1); "
+                f"color: #f5a623; border: 1px solid rgba(245,166,35,0.25); "
                 f'padding: 3px 10px; border-radius: 4px; letter-spacing: 0.04em;">'
-                f'⚠ Citation score {response.coverage_score:.0%} — verify carefully</span>'
+                f"⚠ Citation score {response.coverage_score:.0%} — verify carefully</span>"
             )
 
         st.markdown(badge_html, unsafe_allow_html=True)
@@ -378,27 +388,21 @@ def render_assistant_message(response: RAGResponse, message_id: int):
             st.metric(
                 "Retrieved",
                 response.num_chunks_retrieved,
-                help="Hybrid BM25 + vector search"
+                help="Hybrid BM25 + vector search",
             )
         with col2:
             st.metric(
-                "Reranked to",
-                response.num_chunks_reranked,
-                help="After cross-encoder"
+                "Reranked to", response.num_chunks_reranked, help="After cross-encoder"
             )
         with col3:
             bm25_n = stats.get("bm25_count", 0)
-            vec_n  = stats.get("vector_count", 0)
+            vec_n = stats.get("vector_count", 0)
             st.metric(
-                "BM25 / Vec",
-                f"{bm25_n} / {vec_n}",
-                help="Keyword vs semantic hits"
+                "BM25 / Vec", f"{bm25_n} / {vec_n}", help="Keyword vs semantic hits"
             )
         with col4:
             st.metric(
-                "Time",
-                f"{response.processing_time_ms:.0f}ms",
-                help="Total query time"
+                "Time", f"{response.processing_time_ms:.0f}ms", help="Total query time"
             )
 
         # ── Sources expander ─────────────────────────────────────
@@ -418,10 +422,10 @@ def render_assistant_message(response: RAGResponse, message_id: int):
 
 
 def render_source_card(
-    chunk      : Document,
-    score      : float,
-    card_index : int,
-    message_id : int,
+    chunk: Document,
+    score: float,
+    card_index: int,
+    message_id: int,
 ):
     """Renders one source chunk as a styled card."""
 
@@ -436,10 +440,10 @@ def render_source_card(
         score_color = "#ff4757"
         score_label = "LOW"
 
-    source   = chunk.metadata.get("source",    "—")
-    page     = chunk.metadata.get("page",      "—")
-    chunk_id = chunk.metadata.get("chunk_id",  "—")
-    ret_src  = chunk.metadata.get("retrieval_source", "—")
+    source = chunk.metadata.get("source", "—")
+    page = chunk.metadata.get("page", "—")
+    chunk_id = chunk.metadata.get("chunk_id", "—")
+    ret_src = chunk.metadata.get("retrieval_source", "—")
 
     # Card header
     st.markdown(
@@ -480,18 +484,18 @@ def render_source_card(
 
     # Chunk text
     st.text_area(
-        label       = "",
-        value       = chunk.page_content,
-        height      = 100,
-        disabled    = True,
-        key         = f"src_{message_id}_{card_index}",
-        label_visibility = "collapsed",
+        label="",
+        value=chunk.page_content,
+        height=100,
+        disabled=True,
+        key=f"src_{message_id}_{card_index}",
+        label_visibility="collapsed",
     )
 
     # Chunk ID footer
     st.markdown(
         f'<div style="font-family: JetBrains Mono, monospace; font-size: 0.62rem; '
-        f'color: #2a3f6b; margin-top: 0.2rem; margin-bottom: 0.75rem; '
+        f"color: #2a3f6b; margin-top: 0.2rem; margin-bottom: 0.75rem; "
         f'word-break: break-all;">{chunk_id}</div>',
         unsafe_allow_html=True,
     )
@@ -501,12 +505,13 @@ def render_source_card(
 # PROCESSING PROGRESS
 # ══════════════════════════════════════════════════════════════════
 
+
 def render_processing_progress(stage: str, percent: int):
     """Renders a progress bar with mono-font stage label."""
     st.sidebar.markdown(
         f'<div style="font-family: JetBrains Mono, monospace; font-size: 0.68rem; '
         f'color: #00d4ff; letter-spacing: 0.05em; margin-bottom: 0.3rem;">'
-        f'{stage}</div>',
+        f"{stage}</div>",
         unsafe_allow_html=True,
     )
     st.sidebar.progress(percent / 100)
@@ -515,6 +520,7 @@ def render_processing_progress(stage: str, percent: int):
 # ══════════════════════════════════════════════════════════════════
 # ERROR MESSAGE
 # ══════════════════════════════════════════════════════════════════
+
 
 def render_error_message(error: str, suggestion: str = ""):
     """Renders a styled error box."""
@@ -552,6 +558,7 @@ def render_error_message(error: str, suggestion: str = ""):
 # ══════════════════════════════════════════════════════════════════
 # THINKING INDICATOR
 # ══════════════════════════════════════════════════════════════════
+
 
 def render_thinking_indicator():
     """Returns a spinner context manager."""

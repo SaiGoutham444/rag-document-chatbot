@@ -159,15 +159,16 @@ def _get_groq_llm():
 
         # Set environment variable explicitly before init
         import os
+
         os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 
         llm = ChatGroq(
-            model        = GROQ_LLM_MODEL,
-            temperature  = LLM_TEMPERATURE,
-            max_tokens   = LLM_MAX_TOKENS,
-            groq_api_key = GROQ_API_KEY,
+            model=GROQ_LLM_MODEL,
+            temperature=LLM_TEMPERATURE,
+            max_tokens=LLM_MAX_TOKENS,
+            groq_api_key=GROQ_API_KEY,
             # Disable streaming on cloud to avoid timeout
-            streaming    = False,
+            streaming=False,
         )
 
         logger.info(
@@ -180,6 +181,7 @@ def _get_groq_llm():
         raise
     except Exception as e:
         raise RuntimeError(f"Failed to initialize Groq LLM: {e}") from e
+
 
 def _get_local_llm():
     """
