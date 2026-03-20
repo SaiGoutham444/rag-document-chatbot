@@ -14,26 +14,27 @@ The LLM is the FINAL step in the pipeline:
   retrieved chunks → reranked → citation prompt → LLM → cited answer
 """
 
-import time                                    # Timing generation
-from typing import Optional, Generator, List   # Type hints
+import time  # Timing generation
+from typing import Optional, Generator  # Type hints
 
 from loguru import logger
 
 from src.config import (
-    LLM_PROVIDER,         # "openai" or "groq" or "local"
-    LLM_TEMPERATURE,      # 0.1 — factual, consistent
-    LLM_MAX_TOKENS,       # 1024 — enough for a well-cited answer
-    OPENAI_API_KEY,       # needed if provider = "openai"
-    GROQ_API_KEY,         # needed if provider = "groq"
-    OPENAI_LLM_MODEL,     # "gpt-4o-mini"
-    GROQ_LLM_MODEL,       # "llama3-70b-8192"
-    CONTEXT_WINDOW_LIMITS,# max tokens per model
+    LLM_PROVIDER,  # "openai" or "groq" or "local"
+    LLM_TEMPERATURE,  # 0.1 — factual, consistent
+    LLM_MAX_TOKENS,  # 1024 — enough for a well-cited answer
+    OPENAI_API_KEY,  # needed if provider = "openai"
+    GROQ_API_KEY,  # needed if provider = "groq"
+    OPENAI_LLM_MODEL,  # "gpt-4o-mini"
+    GROQ_LLM_MODEL,  # "llama3-70b-8192"
+    CONTEXT_WINDOW_LIMITS,  # max tokens per model
 )
 
 
 # ══════════════════════════════════════════════════════════════════
 # LLM FACTORY — returns correct LLM based on config
 # ══════════════════════════════════════════════════════════════════
+
 
 def get_llm(provider: Optional[str] = None):
     """
@@ -103,11 +104,11 @@ def _get_openai_llm():
             )
 
         llm = ChatOpenAI(
-            model       = OPENAI_LLM_MODEL,    # "gpt-4o-mini"
-            temperature = LLM_TEMPERATURE,     # 0.1
-            max_tokens  = LLM_MAX_TOKENS,      # 1024
-            openai_api_key = OPENAI_API_KEY,
-            streaming   = True,                # enable token streaming
+            model=OPENAI_LLM_MODEL,  # "gpt-4o-mini"
+            temperature=LLM_TEMPERATURE,  # 0.1
+            max_tokens=LLM_MAX_TOKENS,  # 1024
+            openai_api_key=OPENAI_API_KEY,
+            streaming=True,  # enable token streaming
         )
 
         logger.info(
@@ -120,9 +121,7 @@ def _get_openai_llm():
     except (ValueError, ImportError):
         raise
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to initialize OpenAI LLM: {e}"
-        ) from e
+        raise RuntimeError(f"Failed to initialize OpenAI LLM: {e}") from e
 
 
 def _get_groq_llm():
@@ -158,10 +157,10 @@ def _get_groq_llm():
             )
 
         llm = ChatGroq(
-            model       = GROQ_LLM_MODEL,   # "llama3-70b-8192"
-            temperature = LLM_TEMPERATURE,  # 0.1
-            max_tokens  = LLM_MAX_TOKENS,   # 1024
-            groq_api_key= GROQ_API_KEY,
+            model=GROQ_LLM_MODEL,  # "llama3-70b-8192"
+            temperature=LLM_TEMPERATURE,  # 0.1
+            max_tokens=LLM_MAX_TOKENS,  # 1024
+            groq_api_key=GROQ_API_KEY,
         )
 
         logger.info(
@@ -175,9 +174,7 @@ def _get_groq_llm():
     except (ValueError, ImportError):
         raise
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to initialize Groq LLM: {e}"
-        ) from e
+        raise RuntimeError(f"Failed to initialize Groq LLM: {e}") from e
 
 
 def _get_local_llm():
@@ -202,8 +199,8 @@ def _get_local_llm():
         from langchain_community.chat_models import ChatOllama
 
         llm = ChatOllama(
-            model       = "mistral",          # or "llama3", "phi3", etc.
-            temperature = LLM_TEMPERATURE,
+            model="mistral",  # or "llama3", "phi3", etc.
+            temperature=LLM_TEMPERATURE,
         )
 
         logger.info(
@@ -232,10 +229,11 @@ def _get_local_llm():
 # ANSWER GENERATION
 # ══════════════════════════════════════════════════════════════════
 
+
 def generate_answer(
     llm,
-    prompt  : str,
-    stream  : bool = False,
+    prompt: str,
+    stream: bool = False,
 ) -> str:
     """
     Sends a prompt to the LLM and returns the complete response.
@@ -282,7 +280,7 @@ def generate_answer(
         else:
             # ── Non-streaming mode ──────────────────────────────────
             # .invoke() sends prompt, waits, returns AIMessage
-            response      = llm.invoke(prompt)
+            response = llm.invoke(prompt)
             full_response = response.content
 
         elapsed = time.time() - start_time
@@ -327,9 +325,7 @@ def generate_answer(
             ) from e
 
         else:
-            raise RuntimeError(
-                f"LLM generation failed: {e}"
-            ) from e
+            raise RuntimeError(f"LLM generation failed: {e}") from e
 
 
 def generate_answer_stream(
@@ -360,10 +356,7 @@ def generate_answer_stream(
         if not prompt or not prompt.strip():
             raise ValueError("Prompt cannot be empty.")
 
-        logger.info(
-            f"Starting streaming generation | "
-            f"Prompt: {len(prompt)} chars"
-        )
+        logger.info(f"Starting streaming generation | " f"Prompt: {len(prompt)} chars")
 
         # .stream() yields AIMessageChunk objects
         # Each chunk.content is a small string (1-5 tokens)
@@ -381,6 +374,7 @@ def generate_answer_stream(
 # ══════════════════════════════════════════════════════════════════
 # TOKEN COUNTING UTILITIES
 # ══════════════════════════════════════════════════════════════════
+
 
 def count_tokens(text: str, model: str = "gpt-4o-mini") -> int:
     """
@@ -435,9 +429,9 @@ def count_tokens(text: str, model: str = "gpt-4o-mini") -> int:
 
 
 def check_context_fits(
-    prompt          : str,
-    model           : str = GROQ_LLM_MODEL,
-    safety_margin   : int = 500,
+    prompt: str,
+    model: str = GROQ_LLM_MODEL,
+    safety_margin: int = 500,
 ) -> bool:
     """
     Checks if a prompt fits within a model's context window.
@@ -490,6 +484,7 @@ def check_context_fits(
 # QUICK TEST FUNCTION
 # ══════════════════════════════════════════════════════════════════
 
+
 def test_llm_connection(provider: Optional[str] = None) -> bool:
     """
     Tests LLM connectivity with a simple ping message.
@@ -503,13 +498,12 @@ def test_llm_connection(provider: Optional[str] = None) -> bool:
         False : connection failed (logged with reason)
     """
     try:
-        llm      = get_llm(provider)
+        llm = get_llm(provider)
         response = generate_answer(llm, "Say 'OK' and nothing else.")
 
         if response and len(response.strip()) > 0:
             logger.info(
-                f"LLM connection test passed | "
-                f"Response: '{response.strip()[:50]}'"
+                f"LLM connection test passed | " f"Response: '{response.strip()[:50]}'"
             )
             return True
         else:

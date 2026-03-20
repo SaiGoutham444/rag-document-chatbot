@@ -21,17 +21,18 @@ from src.rag_pipeline import RAGPipeline
 # ══════════════════════════════════════════════════════════════════
 
 st.set_page_config(
-    page_title            = "RAG Document Chatbot",
-    page_icon             = "📚",
-    layout                = "wide",
-    initial_sidebar_state = "expanded",
+    page_title="RAG Document Chatbot",
+    page_icon="📚",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 # ══════════════════════════════════════════════════════════════════
 # GLOBAL CSS
 # ══════════════════════════════════════════════════════════════════
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
 
@@ -62,33 +63,40 @@ textarea[disabled] { background:#0d1117 !important; color:#8b949e !important; bo
 hr { border-color:#21262d !important; }
 ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:#0d1117; } ::-webkit-scrollbar-thumb { background:#30363d; border-radius:2px; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # ══════════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
 # ══════════════════════════════════════════════════════════════════
 
+
 def hl_citations(text: str) -> str:
     """Wrap [SOURCE:...] tags in cyan highlight spans."""
     return re.sub(
-        r'(\[SOURCE:[^\]]+\])',
+        r"(\[SOURCE:[^\]]+\])",
         r'<span style="font-family:JetBrains Mono,monospace;font-size:0.68rem;'
-        r'background:rgba(88,166,255,0.12);color:#58a6ff;'
-        r'border:1px solid rgba(88,166,255,0.3);padding:1px 5px;'
+        r"background:rgba(88,166,255,0.12);color:#58a6ff;"
+        r"border:1px solid rgba(88,166,255,0.3);padding:1px 5px;"
         r'border-radius:3px;">\1</span>',
-        text, flags=re.IGNORECASE,
+        text,
+        flags=re.IGNORECASE,
     )
 
 
 def score_html(score: float) -> str:
     """Return colored score badge HTML."""
-    if score >= 0.8:   c, lbl = "#2ea043", "HIGH"
-    elif score >= 0.6: c, lbl = "#d29922", "MED"
-    else:              c, lbl = "#da3633", "LOW"
+    if score >= 0.8:
+        c, lbl = "#2ea043", "HIGH"
+    elif score >= 0.6:
+        c, lbl = "#d29922", "MED"
+    else:
+        c, lbl = "#da3633", "LOW"
     return (
         f'<span style="background:{c}22;color:{c};border:1px solid {c}44;'
-        f'padding:2px 8px;border-radius:4px;font-family:JetBrains Mono,monospace;'
+        f"padding:2px 8px;border-radius:4px;font-family:JetBrains Mono,monospace;"
         f'font-size:0.67rem;font-weight:600;">{lbl} {score:.3f}</span>'
     )
 
@@ -97,7 +105,7 @@ def mono(text: str, color: str = "#8b949e", size: str = "0.68rem") -> str:
     """Return monospace span HTML."""
     return (
         f'<span style="font-family:JetBrains Mono,monospace;'
-        f'font-size:{size};color:{color};'
+        f"font-size:{size};color:{color};"
         f'text-transform:uppercase;letter-spacing:0.08em;">{text}</span>'
     )
 
@@ -106,10 +114,13 @@ def mono(text: str, color: str = "#8b949e", size: str = "0.68rem") -> str:
 # SESSION STATE
 # ══════════════════════════════════════════════════════════════════
 
+
 def init_session():
     for k, v in {
-        "pipeline": None, "pipeline_ready": False,
-        "messages": [], "current_doc": None,
+        "pipeline": None,
+        "pipeline_ready": False,
+        "messages": [],
+        "current_doc": None,
         "processing_result": None,
     }.items():
         if k not in st.session_state:
@@ -120,11 +131,12 @@ def init_session():
 # PIPELINE
 # ══════════════════════════════════════════════════════════════════
 
+
 def get_pipeline() -> RAGPipeline:
     if st.session_state.pipeline is None:
         with st.spinner("Loading models — embedding + reranker + LLM…"):
             try:
-                st.session_state.pipeline       = RAGPipeline()
+                st.session_state.pipeline = RAGPipeline()
                 st.session_state.pipeline_ready = True
             except Exception as e:
                 st.error(f"Pipeline init failed: {e}")
@@ -136,6 +148,7 @@ def get_pipeline() -> RAGPipeline:
 # UPLOAD HANDLER
 # ══════════════════════════════════════════════════════════════════
 
+
 def handle_upload(uploaded_file, pipeline: RAGPipeline):
     if uploaded_file.name == st.session_state.current_doc:
         return
@@ -146,12 +159,15 @@ def handle_upload(uploaded_file, pipeline: RAGPipeline):
             tmp.write(uploaded_file.getvalue())
             tmp_path = tmp.name
 
-        prog    = st.sidebar.progress(0)
-        status  = st.sidebar.empty()
+        prog = st.sidebar.progress(0)
+        status = st.sidebar.empty()
 
         for label, pct in [
-            ("Loading…", 20), ("Chunking…", 40),
-            ("Embedding…", 70), ("Indexing…", 90), ("Ready!", 100),
+            ("Loading…", 20),
+            ("Chunking…", 40),
+            ("Embedding…", 70),
+            ("Indexing…", 90),
+            ("Ready!", 100),
         ]:
             status.markdown(mono(label, "#58a6ff", "0.72rem"), unsafe_allow_html=True)
             prog.progress(pct / 100)
@@ -159,9 +175,9 @@ def handle_upload(uploaded_file, pipeline: RAGPipeline):
         result = pipeline.process_document(tmp_path)
         result.source_name = uploaded_file.name
 
-        st.session_state.current_doc        = uploaded_file.name
-        st.session_state.processing_result  = result
-        st.session_state.messages           = []
+        st.session_state.current_doc = uploaded_file.name
+        st.session_state.processing_result = result
+        st.session_state.messages = []
         status.empty()
         prog.empty()
 
@@ -176,12 +192,13 @@ def handle_upload(uploaded_file, pipeline: RAGPipeline):
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════
 
+
 def render_sidebar(pipeline: RAGPipeline) -> dict:
 
     # Brand
     st.sidebar.markdown(
         '<h2 style="color:#f0f6fc;font-size:1.25rem;margin-bottom:0.1rem;font-weight:500;">'
-        '📚 RAG Document Chatbot</h2>',
+        "📚 RAG Document Chatbot</h2>",
         unsafe_allow_html=True,
     )
     st.sidebar.markdown(
@@ -193,8 +210,10 @@ def render_sidebar(pipeline: RAGPipeline) -> dict:
     # Upload
     st.sidebar.markdown(mono("Upload Document"), unsafe_allow_html=True)
     uploaded = st.sidebar.file_uploader(
-        "file", type=["pdf","docx","txt","csv","html"],
-        label_visibility="collapsed", key="uploader",
+        "file",
+        type=["pdf", "docx", "txt", "csv", "html"],
+        label_visibility="collapsed",
+        key="uploader",
     )
     if uploaded:
         handle_upload(uploaded, pipeline)
@@ -205,9 +224,9 @@ def render_sidebar(pipeline: RAGPipeline) -> dict:
         st.sidebar.success(f"✅ **{r.source_name}**")
         a, b = st.sidebar.columns(2)
         a.metric("Chunks", r.num_chunks)
-        b.metric("Pages",  r.num_pages)
-        a.metric("Avg",    f"{r.avg_chunk_size:.0f}c")
-        b.metric("Time",   f"{r.processing_time:.1f}s")
+        b.metric("Pages", r.num_pages)
+        a.metric("Avg", f"{r.avg_chunk_size:.0f}c")
+        b.metric("Time", f"{r.processing_time:.1f}s")
         if r.already_existed:
             st.sidebar.caption("⚡ Loaded from cache")
 
@@ -215,8 +234,8 @@ def render_sidebar(pipeline: RAGPipeline) -> dict:
 
     # Settings
     st.sidebar.markdown(mono("Retrieval Settings"), unsafe_allow_html=True)
-    top_k     = st.sidebar.slider("Retrieval Top-K", 5,  30, 20, 5)
-    rerank_k  = st.sidebar.slider("Rerank Top-K",    2,   8,  3, 1)
+    top_k = st.sidebar.slider("Retrieval Top-K", 5, 30, 20, 5)
+    rerank_k = st.sidebar.slider("Rerank Top-K", 2, 8, 3, 1)
 
     st.sidebar.divider()
     if st.sidebar.button("↺  Clear Conversation", use_container_width=True):
@@ -228,19 +247,19 @@ def render_sidebar(pipeline: RAGPipeline) -> dict:
     st.sidebar.markdown(mono("System Status"), unsafe_allow_html=True)
     s = pipeline.get_pipeline_status()
     for name, val, ok in [
-        ("Embeddings", s.get("embedding_provider","—"), True),
-        ("LLM",        s.get("llm_provider","—"),        True),
-        ("Reranker",   "ms-marco",                       s.get("reranker_loaded", False)),
-        ("Document",   s.get("current_source","none"),   s.get("document_loaded", False)),
+        ("Embeddings", s.get("embedding_provider", "—"), True),
+        ("LLM", s.get("llm_provider", "—"), True),
+        ("Reranker", "ms-marco", s.get("reranker_loaded", False)),
+        ("Document", s.get("current_source", "none"), s.get("document_loaded", False)),
     ]:
         dot = "🟢" if ok else "🔴"
         st.sidebar.markdown(
             f'<div style="display:flex;justify-content:space-between;'
             f'padding:0.25rem 0;border-bottom:1px solid #21262d;">'
             f'<span style="font-family:JetBrains Mono,monospace;font-size:0.65rem;color:#8b949e;">'
-            f'{dot} {name}</span>'
+            f"{dot} {name}</span>"
             f'<span style="font-family:JetBrains Mono,monospace;font-size:0.65rem;color:#58a6ff;">'
-            f'{str(val)[:20]}</span></div>',
+            f"{str(val)[:20]}</span></div>",
             unsafe_allow_html=True,
         )
 
@@ -250,6 +269,7 @@ def render_sidebar(pipeline: RAGPipeline) -> dict:
 # ══════════════════════════════════════════════════════════════════
 # WELCOME SCREEN
 # ══════════════════════════════════════════════════════════════════
+
 
 def render_welcome():
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -261,24 +281,28 @@ def render_welcome():
         )
         st.markdown(
             '<h1 style="text-align:center;color:#f0f6fc;font-size:2rem;'
-            'font-weight:300;letter-spacing:-0.02em;line-height:1.3;'
+            "font-weight:300;letter-spacing:-0.02em;line-height:1.3;"
             'margin-bottom:0.75rem;">'
-            'Ask anything about<br>your documents'
-            '</h1>',
+            "Ask anything about<br>your documents"
+            "</h1>",
             unsafe_allow_html=True,
         )
         st.markdown(
             '<p style="text-align:center;color:#8b949e;font-size:0.9rem;'
             'line-height:1.7;margin-bottom:2rem;">'
-            'Every answer is grounded in your document with verifiable citations.<br>'
-            'Powered by hybrid BM25 + vector search and cross-encoder reranking.'
-            '</p>',
+            "Every answer is grounded in your document with verifiable citations.<br>"
+            "Powered by hybrid BM25 + vector search and cross-encoder reranking."
+            "</p>",
             unsafe_allow_html=True,
         )
 
         # Feature pills
-        pills = ["🔀 Hybrid BM25+Vector", "🏆 Cross-Encoder Reranking",
-                 "📎 Citations Enforced", "✅ Hallucination Detection"]
+        pills = [
+            "🔀 Hybrid BM25+Vector",
+            "🏆 Cross-Encoder Reranking",
+            "📎 Citations Enforced",
+            "✅ Hallucination Detection",
+        ]
         pills_html = (
             '<div style="display:flex;flex-wrap:wrap;gap:0.5rem;'
             'justify-content:center;margin-bottom:2rem;">'
@@ -286,11 +310,11 @@ def render_welcome():
         for p in pills:
             pills_html += (
                 f'<span style="font-family:JetBrains Mono,monospace;'
-                f'font-size:0.67rem;background:rgba(88,166,255,0.08);'
-                f'color:#58a6ff;border:1px solid rgba(88,166,255,0.2);'
+                f"font-size:0.67rem;background:rgba(88,166,255,0.08);"
+                f"color:#58a6ff;border:1px solid rgba(88,166,255,0.2);"
                 f'padding:0.3rem 0.75rem;border-radius:20px;">{p}</span>'
             )
-        pills_html += '</div>'
+        pills_html += "</div>"
         st.markdown(pills_html, unsafe_allow_html=True)
         st.info("👈  Upload a document in the sidebar to get started")
 
@@ -298,6 +322,7 @@ def render_welcome():
 # ══════════════════════════════════════════════════════════════════
 # ASSISTANT RESPONSE
 # ══════════════════════════════════════════════════════════════════
+
 
 def render_response(response, msg_id: int):
     with st.chat_message("assistant"):
@@ -325,45 +350,51 @@ def render_response(response, msg_id: int):
         st.markdown("<div style='margin-top:0.6rem'></div>", unsafe_allow_html=True)
         stats = response.retrieval_stats
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Retrieved",   response.num_chunks_retrieved)
+        c1.metric("Retrieved", response.num_chunks_retrieved)
         c2.metric("Reranked to", response.num_chunks_reranked)
-        c3.metric("BM25/Vec",    f"{stats.get('bm25_count',0)}/{stats.get('vector_count',0)}")
-        c4.metric("Time",        f"{response.processing_time_ms:.0f}ms")
+        c3.metric(
+            "BM25/Vec", f"{stats.get('bm25_count',0)}/{stats.get('vector_count',0)}"
+        )
+        c4.metric("Time", f"{response.processing_time_ms:.0f}ms")
 
         # Sources
         if response.source_chunks:
             n = len(response.source_chunks)
             with st.expander(f"◈  Source Chunks  ({n})", expanded=False):
                 for i, chunk in enumerate(response.source_chunks, 1):
-                    score   = response.rerank_scores[i-1] if i-1 < len(response.rerank_scores) else 0.0
-                    source  = chunk.metadata.get("source", "—")
-                    page    = chunk.metadata.get("page",   "—")
+                    score = (
+                        response.rerank_scores[i - 1]
+                        if i - 1 < len(response.rerank_scores)
+                        else 0.0
+                    )
+                    source = chunk.metadata.get("source", "—")
+                    page = chunk.metadata.get("page", "—")
                     ret_src = chunk.metadata.get("retrieval_source", "—")
-                    cid     = chunk.metadata.get("chunk_id", "—")
+                    cid = chunk.metadata.get("chunk_id", "—")
 
                     st.markdown(
                         f'<div style="display:flex;justify-content:space-between;'
-                        f'align-items:center;padding:0.5rem 0;'
+                        f"align-items:center;padding:0.5rem 0;"
                         f'border-bottom:1px solid #21262d;margin-bottom:0.5rem;">'
                         f'<span style="font-family:JetBrains Mono,monospace;'
                         f'font-size:0.67rem;color:#8b949e;">'
-                        f'#{i} &nbsp;·&nbsp; {source} &nbsp;·&nbsp; '
-                        f'pg {page} &nbsp;·&nbsp; {ret_src}</span>'
-                        f'{score_html(score)}</div>',
+                        f"#{i} &nbsp;·&nbsp; {source} &nbsp;·&nbsp; "
+                        f"pg {page} &nbsp;·&nbsp; {ret_src}</span>"
+                        f"{score_html(score)}</div>",
                         unsafe_allow_html=True,
                     )
                     # NEW — proper label, hidden visually
                     st.text_area(
-                        label            = f"Chunk {i} content",
-                        value            = chunk.page_content,
-                        height           = 95,
-                        disabled         = True,
-                        key              = f"c_{msg_id}_{i}",
-                        label_visibility = "collapsed",
+                        label=f"Chunk {i} content",
+                        value=chunk.page_content,
+                        height=95,
+                        disabled=True,
+                        key=f"c_{msg_id}_{i}",
+                        label_visibility="collapsed",
                     )
                     st.markdown(
                         f'<div style="font-family:JetBrains Mono,monospace;'
-                        f'font-size:0.6rem;color:#30363d;margin-bottom:0.75rem;'
+                        f"font-size:0.6rem;color:#30363d;margin-bottom:0.75rem;"
                         f'word-break:break-all;">{cid}</div>',
                         unsafe_allow_html=True,
                     )
@@ -372,6 +403,7 @@ def render_response(response, msg_id: int):
 # ══════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════
+
 
 def main():
     init_session()
@@ -392,7 +424,7 @@ def main():
         f'<span style="font-family:JetBrains Mono,monospace;font-size:0.62rem;'
         f'color:#8b949e;text-transform:uppercase;letter-spacing:0.1em;">'
         f'retrieve top-{settings["top_k"]}  →  rerank top-{settings["rerank_k"]}  →  cited answer'
-        f'</span></div>',
+        f"</span></div>",
         unsafe_allow_html=True,
     )
 
@@ -421,7 +453,7 @@ def main():
         with st.chat_message("user"):
             st.markdown(
                 f'<div style="color:#f0f6fc;font-size:0.92rem;line-height:1.65;">'
-                f'{question}</div>',
+                f"{question}</div>",
                 unsafe_allow_html=True,
             )
 

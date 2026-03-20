@@ -26,6 +26,7 @@ from loguru import logger
 # RESULT DATA CLASS
 # ══════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class EvalResult:
     """
@@ -34,17 +35,18 @@ class EvalResult:
     All scores: 0.0 (worst) → 1.0 (best)
     overall_score: weighted average of all metrics
     """
-    question          : str
-    ground_truth      : str
-    generated_answer  : str
-    faithfulness      : float = 0.0
-    answer_relevancy  : float = 0.0
-    context_recall    : float = 0.0
-    context_precision : float = 0.0
-    citation_coverage : float = 0.0
-    overall_score     : float = 0.0
-    category          : str   = ""
-    error             : Optional[str] = None
+
+    question: str
+    ground_truth: str
+    generated_answer: str
+    faithfulness: float = 0.0
+    answer_relevancy: float = 0.0
+    context_recall: float = 0.0
+    context_precision: float = 0.0
+    citation_coverage: float = 0.0
+    overall_score: float = 0.0
+    category: str = ""
+    error: Optional[str] = None
 
 
 @dataclass
@@ -53,25 +55,27 @@ class EvalReport:
     Aggregated evaluation report across all questions.
     Contains per-question results and overall averages.
     """
-    results             : List[EvalResult] = field(default_factory=list)
-    avg_faithfulness    : float = 0.0
+
+    results: List[EvalResult] = field(default_factory=list)
+    avg_faithfulness: float = 0.0
     avg_answer_relevancy: float = 0.0
-    avg_context_recall  : float = 0.0
-    avg_context_precision:float = 0.0
-    avg_citation_coverage:float = 0.0
-    avg_overall_score   : float = 0.0
-    total_questions     : int   = 0
-    passed_questions    : int   = 0
-    quality_gate_passed : bool  = False
+    avg_context_recall: float = 0.0
+    avg_context_precision: float = 0.0
+    avg_citation_coverage: float = 0.0
+    avg_overall_score: float = 0.0
+    total_questions: int = 0
+    passed_questions: int = 0
+    quality_gate_passed: bool = False
 
 
 # ══════════════════════════════════════════════════════════════════
 # INDIVIDUAL METRICS
 # ══════════════════════════════════════════════════════════════════
 
+
 def compute_faithfulness(
-    answer         : str,
-    context_chunks : List[Document],
+    answer: str,
+    context_chunks: List[Document],
 ) -> float:
     """
     Measures how grounded the answer is in the retrieved context.
@@ -98,16 +102,13 @@ def compute_faithfulness(
         return 0.0
 
     # Build the full context text for checking
-    context_text = " ".join(
-        chunk.page_content.lower()
-        for chunk in context_chunks
-    )
+    context_text = " ".join(chunk.page_content.lower() for chunk in context_chunks)
 
     # Split answer into sentences/claims
     sentences = [
         s.strip()
-        for s in re.split(r'[.!?\n]+', answer)
-        if len(s.strip()) > 20   # skip very short fragments
+        for s in re.split(r"[.!?\n]+", answer)
+        if len(s.strip()) > 20  # skip very short fragments
     ]
 
     if not sentences:
@@ -115,22 +116,49 @@ def compute_faithfulness(
 
     # Stop words to ignore during token matching
     STOP_WORDS = {
-        "the", "is", "at", "which", "on", "a", "an", "and",
-        "or", "but", "in", "with", "to", "of", "for", "as",
-        "by", "from", "be", "was", "are", "were", "this",
-        "that", "it", "we", "they", "have", "has", "had",
+        "the",
+        "is",
+        "at",
+        "which",
+        "on",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "with",
+        "to",
+        "of",
+        "for",
+        "as",
+        "by",
+        "from",
+        "be",
+        "was",
+        "are",
+        "were",
+        "this",
+        "that",
+        "it",
+        "we",
+        "they",
+        "have",
+        "has",
+        "had",
     }
 
     supported_count = 0
 
     for sentence in sentences:
         # Remove citation tags before checking
-        clean = re.sub(r'\[SOURCE:[^\]]+\]', '', sentence)
+        clean = re.sub(r"\[SOURCE:[^\]]+\]", "", sentence)
         clean = clean.lower()
 
         # Get meaningful tokens from this claim
         tokens = [
-            t for t in re.findall(r'\b[a-z0-9]+\b', clean)
+            t
+            for t in re.findall(r"\b[a-z0-9]+\b", clean)
             if t not in STOP_WORDS and len(t) > 2
         ]
 
@@ -142,7 +170,7 @@ def compute_faithfulness(
         found = sum(1 for t in tokens if t in context_text)
         support_ratio = found / len(tokens)
 
-        if support_ratio >= 0.5:   # at least half the tokens in context
+        if support_ratio >= 0.5:  # at least half the tokens in context
             supported_count += 1
 
     score = supported_count / len(sentences)
@@ -155,8 +183,8 @@ def compute_faithfulness(
 
 def compute_answer_relevancy(
     question: str,
-    answer  : str,
-    embedding_model = None,
+    answer: str,
+    embedding_model=None,
 ) -> float:
     """
     Measures how relevant the answer is to the question.
@@ -187,13 +215,15 @@ def compute_answer_relevancy(
         # Semantic similarity using embeddings
         try:
             import numpy as np
+
             q_vec = np.array(embedding_model.embed_query(question))
             a_vec = np.array(embedding_model.embed_query(answer))
 
             # Cosine similarity
-            similarity = float(np.dot(q_vec, a_vec) / (
-                np.linalg.norm(q_vec) * np.linalg.norm(a_vec) + 1e-8
-            ))
+            similarity = float(
+                np.dot(q_vec, a_vec)
+                / (np.linalg.norm(q_vec) * np.linalg.norm(a_vec) + 1e-8)
+            )
             score = max(0.0, min(1.0, similarity))
             logger.debug(f"Answer relevancy (semantic): {score:.3f}")
             return round(score, 4)
@@ -204,12 +234,10 @@ def compute_answer_relevancy(
     # Keyword overlap heuristic (fallback)
     # Extract key question terms
     question_words = set(
-        w.lower() for w in re.findall(r'\b[a-z]+\b', question.lower())
-        if len(w) > 3
+        w.lower() for w in re.findall(r"\b[a-z]+\b", question.lower()) if len(w) > 3
     )
     answer_words = set(
-        w.lower() for w in re.findall(r'\b[a-z]+\b', answer.lower())
-        if len(w) > 3
+        w.lower() for w in re.findall(r"\b[a-z]+\b", answer.lower()) if len(w) > 3
     )
 
     if not question_words:
@@ -217,8 +245,8 @@ def compute_answer_relevancy(
 
     # Jaccard similarity between question and answer keywords
     overlap = question_words & answer_words
-    union   = question_words | answer_words
-    score   = len(overlap) / len(union) if union else 0.0
+    union = question_words | answer_words
+    score = len(overlap) / len(union) if union else 0.0
 
     # Scale to [0.3, 1.0] range — pure keyword match underestimates relevancy
     score = 0.3 + (score * 0.7)
@@ -229,8 +257,8 @@ def compute_answer_relevancy(
 
 
 def compute_context_recall(
-    question      : str,
-    ground_truth  : str,
+    question: str,
+    ground_truth: str,
     context_chunks: List[Document],
 ) -> float:
     """
@@ -254,26 +282,48 @@ def compute_context_recall(
         return 0.0
 
     # Build context text
-    context_text = " ".join(
-        chunk.page_content.lower()
-        for chunk in context_chunks
-    )
+    context_text = " ".join(chunk.page_content.lower() for chunk in context_chunks)
 
     # Extract key tokens from ground truth
     STOP_WORDS = {
-        "the", "is", "at", "which", "on", "a", "an", "and",
-        "or", "but", "in", "with", "to", "of", "for", "as",
-        "by", "from", "be", "was", "are", "were", "this",
-        "that", "it", "candidate", "has", "have",
+        "the",
+        "is",
+        "at",
+        "which",
+        "on",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "with",
+        "to",
+        "of",
+        "for",
+        "as",
+        "by",
+        "from",
+        "be",
+        "was",
+        "are",
+        "were",
+        "this",
+        "that",
+        "it",
+        "candidate",
+        "has",
+        "have",
     }
 
     gt_tokens = [
-        t for t in re.findall(r'\b[a-z0-9]+\b', ground_truth.lower())
+        t
+        for t in re.findall(r"\b[a-z0-9]+\b", ground_truth.lower())
         if t not in STOP_WORDS and len(t) > 2
     ]
 
     if not gt_tokens:
-        return 0.5   # can't evaluate without tokens
+        return 0.5  # can't evaluate without tokens
 
     # Check how many ground truth tokens appear in context
     found = sum(1 for t in gt_tokens if t in context_text)
@@ -287,9 +337,9 @@ def compute_context_recall(
 
 
 def compute_context_precision(
-    question      : str,
+    question: str,
     context_chunks: List[Document],
-    ground_truth  : str,
+    ground_truth: str,
 ) -> float:
     """
     Measures what fraction of retrieved chunks are actually relevant.
@@ -312,12 +362,27 @@ def compute_context_precision(
 
     # Key tokens from ground truth
     STOP_WORDS = {
-        "the", "is", "a", "an", "and", "or", "in", "with",
-        "to", "of", "for", "as", "by", "from", "be", "was",
+        "the",
+        "is",
+        "a",
+        "an",
+        "and",
+        "or",
+        "in",
+        "with",
+        "to",
+        "of",
+        "for",
+        "as",
+        "by",
+        "from",
+        "be",
+        "was",
     }
 
     gt_tokens = set(
-        t for t in re.findall(r'\b[a-z0-9]+\b', ground_truth.lower())
+        t
+        for t in re.findall(r"\b[a-z0-9]+\b", ground_truth.lower())
         if t not in STOP_WORDS and len(t) > 2
     )
 
@@ -327,8 +392,8 @@ def compute_context_precision(
     relevant_count = 0
 
     for chunk in context_chunks:
-        chunk_text   = chunk.page_content.lower()
-        chunk_tokens = set(re.findall(r'\b[a-z0-9]+\b', chunk_text))
+        chunk_text = chunk.page_content.lower()
+        chunk_tokens = set(re.findall(r"\b[a-z0-9]+\b", chunk_text))
 
         # Chunk is "relevant" if it shares >20% tokens with ground truth
         overlap = gt_tokens & chunk_tokens
@@ -342,6 +407,7 @@ def compute_context_precision(
     )
     return round(score, 4)
 
+
 def compute_citation_coverage(answer: str) -> float:
     if not answer:
         return 0.0
@@ -350,20 +416,20 @@ def compute_citation_coverage(answer: str) -> float:
         return 1.0
 
     # Remove citation tags temporarily to count clean sentences
-    clean_answer = re.sub(r'\[SOURCE:[^\]]+\]', '', answer)
+    clean_answer = re.sub(r"\[SOURCE:[^\]]+\]", "", answer)
 
     # Split into sentences
     sentences = [
         s.strip()
-        for s in re.split(r'[.!\n]+', clean_answer)
-        if len(s.strip()) > 15   # lowered from 20 to 15
+        for s in re.split(r"[.!\n]+", clean_answer)
+        if len(s.strip()) > 15  # lowered from 20 to 15
     ]
 
     if not sentences:
-        return 1.0   # no sentences to check = fine
+        return 1.0  # no sentences to check = fine
 
     # Citation tag pattern in ORIGINAL answer
-    citation_pattern = re.compile(r'\[SOURCE:', re.IGNORECASE)
+    citation_pattern = re.compile(r"\[SOURCE:", re.IGNORECASE)
 
     # Count total citation tags in the full answer
     total_citations = len(citation_pattern.findall(answer))
@@ -380,11 +446,11 @@ def compute_citation_coverage(answer: str) -> float:
 
 
 def compute_overall_score(
-    faithfulness      : float,
-    answer_relevancy  : float,
-    context_recall    : float,
-    context_precision : float,
-    citation_coverage : float,
+    faithfulness: float,
+    answer_relevancy: float,
+    context_recall: float,
+    context_precision: float,
+    citation_coverage: float,
 ) -> float:
     """
     Computes weighted overall score from all 5 metrics.
@@ -403,19 +469,19 @@ def compute_overall_score(
         Weighted average float 0.0-1.0
     """
     weights = {
-        "faithfulness"     : 0.30,
-        "answer_relevancy" : 0.25,
-        "context_recall"   : 0.20,
+        "faithfulness": 0.30,
+        "answer_relevancy": 0.25,
+        "context_recall": 0.20,
         "context_precision": 0.15,
         "citation_coverage": 0.10,
     }
 
     overall = (
-        faithfulness       * weights["faithfulness"]      +
-        answer_relevancy   * weights["answer_relevancy"]  +
-        context_recall     * weights["context_recall"]    +
-        context_precision  * weights["context_precision"] +
-        citation_coverage  * weights["citation_coverage"]
+        faithfulness * weights["faithfulness"]
+        + answer_relevancy * weights["answer_relevancy"]
+        + context_recall * weights["context_recall"]
+        + context_precision * weights["context_precision"]
+        + citation_coverage * weights["citation_coverage"]
     )
 
     return round(overall, 4)

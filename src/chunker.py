@@ -18,23 +18,24 @@ Default settings (tuned for RAG quality):
   chunk_overlap = 50 chars   ≈ half a sentence
 """
 
-import hashlib                                    # For deterministic chunk ID generation
-from typing import List, Dict, Any                # Type hints
+import hashlib  # For deterministic chunk ID generation
+from typing import List, Dict, Any  # Type hints
 
-from langchain_core.documents import Document     # Standard LangChain Document class
+from langchain_core.documents import Document  # Standard LangChain Document class
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from loguru import logger                         # Colored logging
+from loguru import logger  # Colored logging
 
 from src.config import (
-    DEFAULT_CHUNK_SIZE,      # 500 characters
-    DEFAULT_CHUNK_OVERLAP,   # 50 characters
-    CHUNK_SEPARATORS,        # ["\n\n", "\n", ". ", " ", ""]
+    DEFAULT_CHUNK_SIZE,  # 500 characters
+    DEFAULT_CHUNK_OVERLAP,  # 50 characters
+    CHUNK_SEPARATORS,  # ["\n\n", "\n", ". ", " ", ""]
 )
 
 
 # ══════════════════════════════════════════════════════════════════
 # CHUNK ID GENERATION
 # ══════════════════════════════════════════════════════════════════
+
 
 def generate_chunk_id(
     source: str,
@@ -83,6 +84,7 @@ def generate_chunk_id(
 # METADATA ENRICHMENT
 # ══════════════════════════════════════════════════════════════════
 
+
 def add_chunk_metadata(chunks: List[Document]) -> List[Document]:
     """
     Adds chunk-specific metadata fields to every chunk.
@@ -112,7 +114,7 @@ def add_chunk_metadata(chunks: List[Document]) -> List[Document]:
     for index, chunk in enumerate(chunks):
         # Read inherited metadata from parent document
         source = chunk.metadata.get("source", "unknown")
-        page   = chunk.metadata.get("page", 1)
+        page = chunk.metadata.get("page", 1)
 
         # Generate stable unique ID for this chunk
         chunk_id = generate_chunk_id(
@@ -125,18 +127,20 @@ def add_chunk_metadata(chunks: List[Document]) -> List[Document]:
         # Build new metadata: spread existing fields, then add new ones
         # The ** (spread) operator copies all existing key-value pairs
         new_metadata = {
-            **chunk.metadata,               # source, page, file_type, etc. (inherited)
-            "chunk_id"    : chunk_id,       # "report.pdf_p5_c12_a1b2c3d4"
-            "chunk_index" : index,          # 0, 1, 2, 3, ...
-            "total_chunks": total_chunks,   # 47 (same for all chunks from this doc)
-            "char_count"  : len(chunk.page_content),          # 487
-            "word_count"  : len(chunk.page_content.split()),  # 91
+            **chunk.metadata,  # source, page, file_type, etc. (inherited)
+            "chunk_id": chunk_id,  # "report.pdf_p5_c12_a1b2c3d4"
+            "chunk_index": index,  # 0, 1, 2, 3, ...
+            "total_chunks": total_chunks,  # 47 (same for all chunks from this doc)
+            "char_count": len(chunk.page_content),  # 487
+            "word_count": len(chunk.page_content.split()),  # 91
         }
 
-        enriched.append(Document(
-            page_content=chunk.page_content,
-            metadata=new_metadata,
-        ))
+        enriched.append(
+            Document(
+                page_content=chunk.page_content,
+                metadata=new_metadata,
+            )
+        )
 
     return enriched
 
@@ -144,6 +148,7 @@ def add_chunk_metadata(chunks: List[Document]) -> List[Document]:
 # ══════════════════════════════════════════════════════════════════
 # CHUNK VALIDATION
 # ══════════════════════════════════════════════════════════════════
+
 
 def validate_chunks(chunks: List[Document]) -> List[Document]:
     """
@@ -164,8 +169,8 @@ def validate_chunks(chunks: List[Document]) -> List[Document]:
     Raises:
         ValueError: if NO valid chunks remain after filtering
     """
-    valid_chunks   = []
-    invalid_count  = 0
+    valid_chunks = []
+    invalid_count = 0
 
     for chunk in chunks:
         content = chunk.page_content.strip()
@@ -180,8 +185,7 @@ def validate_chunks(chunks: List[Document]) -> List[Document]:
         if len(content) < 20:
             invalid_count += 1
             logger.debug(
-                f"Filtered short chunk ({len(content)} chars): "
-                f"'{content[:50]}'"
+                f"Filtered short chunk ({len(content)} chars): " f"'{content[:50]}'"
             )
             continue
 
@@ -209,6 +213,7 @@ def validate_chunks(chunks: List[Document]) -> List[Document]:
 # CHUNK STATISTICS
 # ══════════════════════════════════════════════════════════════════
 
+
 def get_chunk_statistics(chunks: List[Document]) -> Dict[str, Any]:
     """
     Computes statistics about a list of chunks.
@@ -229,11 +234,11 @@ def get_chunk_statistics(chunks: List[Document]) -> Dict[str, Any]:
     if not chunks:
         return {
             "total_chunks": 0,
-            "min_chars"   : 0,
-            "max_chars"   : 0,
-            "avg_chars"   : 0.0,
-            "total_chars" : 0,
-            "total_words" : 0,
+            "min_chars": 0,
+            "max_chars": 0,
+            "avg_chars": 0.0,
+            "total_chars": 0,
+            "total_words": 0,
         }
 
     # Calculate character count for every chunk
@@ -244,17 +249,18 @@ def get_chunk_statistics(chunks: List[Document]) -> Dict[str, Any]:
 
     return {
         "total_chunks": len(chunks),
-        "min_chars"   : min(char_counts),
-        "max_chars"   : max(char_counts),
-        "avg_chars"   : sum(char_counts) / len(char_counts),
-        "total_chars" : sum(char_counts),
-        "total_words" : total_words,
+        "min_chars": min(char_counts),
+        "max_chars": max(char_counts),
+        "avg_chars": sum(char_counts) / len(char_counts),
+        "total_chars": sum(char_counts),
+        "total_words": total_words,
     }
 
 
 # ══════════════════════════════════════════════════════════════════
 # MAIN SPLITTING FUNCTION — the only one other modules call
 # ══════════════════════════════════════════════════════════════════
+
 
 def split_documents(
     documents: List[Document],
@@ -320,8 +326,8 @@ def split_documents(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             separators=CHUNK_SEPARATORS,  # from config.py
-            length_function=len,          # measure size in characters (not tokens)
-            is_separator_regex=False,     # treat separators as literal strings
+            length_function=len,  # measure size in characters (not tokens)
+            is_separator_regex=False,  # treat separators as literal strings
         )
 
         # ── Split all documents ─────────────────────────────────────
@@ -353,9 +359,7 @@ def split_documents(
         return final_chunks
 
     except ValueError:
-        raise   # Re-raise clean errors unchanged
+        raise  # Re-raise clean errors unchanged
 
     except Exception as e:
-        raise RuntimeError(
-            f"Unexpected error during text splitting: {str(e)}"
-        ) from e
+        raise RuntimeError(f"Unexpected error during text splitting: {str(e)}") from e

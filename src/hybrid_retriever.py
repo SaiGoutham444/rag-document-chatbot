@@ -18,15 +18,15 @@ Output feeds into the cross-encoder reranker (Phase 7)
 which re-scores the top-20 hybrid results with higher precision.
 """
 
-import time                                       # Timing operations
-from typing import List, Tuple, Dict, Optional    # Type hints
+import time  # Timing operations
+from typing import List, Tuple, Dict, Optional  # Type hints
 
 from langchain_core.documents import Document
 from loguru import logger
 
 from src.config import (
-    RETRIEVAL_TOP_K,    # How many results from each retriever (default: 20)
-    RRF_K,             # RRF constant k=60
+    RETRIEVAL_TOP_K,  # How many results from each retriever (default: 20)
+    RRF_K,  # RRF constant k=60
 )
 from src.bm25_retriever import BM25Retriever
 from src.vector_store import query_vector_store
@@ -37,10 +37,11 @@ from src.vector_store import query_vector_store
 # Core algorithm that merges two ranked lists
 # ══════════════════════════════════════════════════════════════════
 
+
 def reciprocal_rank_fusion(
-    bm25_results   : List[Tuple[Document, float]],
-    vector_results : List[Tuple[Document, float]],
-    k              : int = RRF_K,
+    bm25_results: List[Tuple[Document, float]],
+    vector_results: List[Tuple[Document, float]],
+    k: int = RRF_K,
 ) -> List[Tuple[Document, float]]:
     """
     Merges BM25 and vector search results using Reciprocal Rank Fusion.
@@ -94,21 +95,21 @@ def reciprocal_rank_fusion(
         if chunk_id not in rrf_scores:
             # First time we see this chunk — initialize its entry
             rrf_scores[chunk_id] = {
-                "document"       : doc,
-                "rrf_score"      : 0.0,
-                "bm25_score"     : bm25_score,
-                "bm25_rank"      : rank,
-                "vector_score"   : 0.0,
-                "vector_rank"    : None,       # None = not in vector results
-                "in_bm25"        : True,
-                "in_vector"      : False,
+                "document": doc,
+                "rrf_score": 0.0,
+                "bm25_score": bm25_score,
+                "bm25_rank": rank,
+                "vector_score": 0.0,
+                "vector_rank": None,  # None = not in vector results
+                "in_bm25": True,
+                "in_vector": False,
             }
 
         # Add BM25 contribution to running RRF score
         rrf_scores[chunk_id]["rrf_score"] += rrf_contribution
         rrf_scores[chunk_id]["bm25_score"] = bm25_score
-        rrf_scores[chunk_id]["bm25_rank"]  = rank
-        rrf_scores[chunk_id]["in_bm25"]    = True
+        rrf_scores[chunk_id]["bm25_rank"] = rank
+        rrf_scores[chunk_id]["in_bm25"] = True
 
     # ── Process vector results ──────────────────────────────────────
     for rank, (doc, vector_score) in enumerate(vector_results, start=1):
@@ -120,20 +121,20 @@ def reciprocal_rank_fusion(
         if chunk_id not in rrf_scores:
             # New chunk — only in vector results, not in BM25
             rrf_scores[chunk_id] = {
-                "document"       : doc,
-                "rrf_score"      : 0.0,
-                "bm25_score"     : 0.0,
-                "bm25_rank"      : None,       # None = not in BM25 results
-                "vector_score"   : vector_score,
-                "vector_rank"    : rank,
-                "in_bm25"        : False,
-                "in_vector"      : True,
+                "document": doc,
+                "rrf_score": 0.0,
+                "bm25_score": 0.0,
+                "bm25_rank": None,  # None = not in BM25 results
+                "vector_score": vector_score,
+                "vector_rank": rank,
+                "in_bm25": False,
+                "in_vector": True,
             }
         else:
             # Chunk already seen in BM25 results — update vector fields
             rrf_scores[chunk_id]["vector_score"] = vector_score
-            rrf_scores[chunk_id]["vector_rank"]  = rank
-            rrf_scores[chunk_id]["in_vector"]    = True
+            rrf_scores[chunk_id]["vector_rank"] = rank
+            rrf_scores[chunk_id]["in_vector"] = True
 
         # Add vector contribution to running RRF score
         rrf_scores[chunk_id]["rrf_score"] += rrf_contribution
@@ -153,13 +154,13 @@ def reciprocal_rank_fusion(
         doc = item["document"]
 
         # Enrich metadata with retrieval provenance information
-        doc.metadata["rrf_score"]    = round(item["rrf_score"], 6)
-        doc.metadata["bm25_score"]   = round(item["bm25_score"], 4)
+        doc.metadata["rrf_score"] = round(item["rrf_score"], 6)
+        doc.metadata["bm25_score"] = round(item["bm25_score"], 4)
         doc.metadata["vector_score"] = round(item["vector_score"], 4)
-        doc.metadata["bm25_rank"]    = item["bm25_rank"]
-        doc.metadata["vector_rank"]  = item["vector_rank"]
-        doc.metadata["in_bm25"]      = item["in_bm25"]
-        doc.metadata["in_vector"]    = item["in_vector"]
+        doc.metadata["bm25_rank"] = item["bm25_rank"]
+        doc.metadata["vector_rank"] = item["vector_rank"]
+        doc.metadata["in_bm25"] = item["in_bm25"]
+        doc.metadata["in_vector"] = item["in_vector"]
 
         # Label the retrieval source for UI display
         if item["in_bm25"] and item["in_vector"]:
@@ -177,6 +178,7 @@ def reciprocal_rank_fusion(
 # ══════════════════════════════════════════════════════════════════
 # HYBRID RETRIEVER CLASS
 # ══════════════════════════════════════════════════════════════════
+
 
 class HybridRetriever:
     """
@@ -199,11 +201,11 @@ class HybridRetriever:
 
     def __init__(
         self,
-        bm25_retriever  : BM25Retriever,
+        bm25_retriever: BM25Retriever,
         embedding_model,
-        source_name     : str,
+        source_name: str,
         chroma_client,
-        top_k           : int = RETRIEVAL_TOP_K,
+        top_k: int = RETRIEVAL_TOP_K,
     ):
         """
         Initializes the hybrid retriever with both retrieval backends.
@@ -216,11 +218,11 @@ class HybridRetriever:
             top_k          : results to fetch from each retriever
         """
         # Store both retrieval backends
-        self.bm25_retriever  = bm25_retriever
+        self.bm25_retriever = bm25_retriever
         self.embedding_model = embedding_model
-        self.source_name     = source_name
-        self.chroma_client   = chroma_client
-        self.top_k           = top_k
+        self.source_name = source_name
+        self.chroma_client = chroma_client
+        self.top_k = top_k
 
         # Statistics tracking — filled during retrieve()
         self._last_stats: Dict = {}
@@ -266,9 +268,7 @@ class HybridRetriever:
             k = top_k or self.top_k
 
             logger.info(
-                f"Hybrid retrieval started | "
-                f"Query: '{query[:60]}' | "
-                f"Top-K: {k}"
+                f"Hybrid retrieval started | " f"Query: '{query[:60]}' | " f"Top-K: {k}"
             )
             start_time = time.time()
 
@@ -327,30 +327,33 @@ class HybridRetriever:
             elapsed = time.time() - start_time
 
             # Count how many chunks came from each source
-            both_count   = sum(
-                1 for doc, _ in final_results
+            both_count = sum(
+                1
+                for doc, _ in final_results
                 if doc.metadata.get("in_bm25") and doc.metadata.get("in_vector")
             )
-            bm25_only    = sum(
-                1 for doc, _ in final_results
+            bm25_only = sum(
+                1
+                for doc, _ in final_results
                 if doc.metadata.get("in_bm25") and not doc.metadata.get("in_vector")
             )
-            vector_only  = sum(
-                1 for doc, _ in final_results
+            vector_only = sum(
+                1
+                for doc, _ in final_results
                 if doc.metadata.get("in_vector") and not doc.metadata.get("in_bm25")
             )
 
             self._last_stats = {
-                "query"              : query,
-                "bm25_count"         : len(bm25_results),
-                "vector_count"       : len(vector_results),
-                "fused_total"        : len(fused_results),
-                "returned"           : len(final_results),
-                "in_both"            : both_count,
-                "bm25_only"          : bm25_only,
-                "vector_only"        : vector_only,
-                "retrieval_time_ms"  : round(elapsed * 1000, 1),
-                "top_rrf_score"      : final_results[0][1] if final_results else 0,
+                "query": query,
+                "bm25_count": len(bm25_results),
+                "vector_count": len(vector_results),
+                "fused_total": len(fused_results),
+                "returned": len(final_results),
+                "in_both": both_count,
+                "bm25_only": bm25_only,
+                "vector_only": vector_only,
+                "retrieval_time_ms": round(elapsed * 1000, 1),
+                "top_rrf_score": final_results[0][1] if final_results else 0,
             }
 
             logger.info(
@@ -369,9 +372,7 @@ class HybridRetriever:
         except ValueError:
             raise
         except Exception as e:
-            raise RuntimeError(
-                f"Hybrid retrieval failed: {e}"
-            ) from e
+            raise RuntimeError(f"Hybrid retrieval failed: {e}") from e
 
     def get_retrieval_stats(self) -> Dict:
         """
@@ -390,12 +391,13 @@ class HybridRetriever:
 # Used by rag_pipeline.py to set up hybrid retriever in one call
 # ══════════════════════════════════════════════════════════════════
 
+
 def build_hybrid_retriever(
-    bm25_retriever  : BM25Retriever,
+    bm25_retriever: BM25Retriever,
     embedding_model,
-    source_name     : str,
+    source_name: str,
     chroma_client,
-    top_k           : int = RETRIEVAL_TOP_K,
+    top_k: int = RETRIEVAL_TOP_K,
 ) -> HybridRetriever:
     """
     Builds a HybridRetriever from its components.
@@ -412,9 +414,9 @@ def build_hybrid_retriever(
         Ready-to-use HybridRetriever instance
     """
     return HybridRetriever(
-        bm25_retriever  = bm25_retriever,
-        embedding_model = embedding_model,
-        source_name     = source_name,
-        chroma_client   = chroma_client,
-        top_k           = top_k,
+        bm25_retriever=bm25_retriever,
+        embedding_model=embedding_model,
+        source_name=source_name,
+        chroma_client=chroma_client,
+        top_k=top_k,
     )

@@ -12,16 +12,16 @@ The embedding model is used in TWO places:
 Both must use the SAME model — otherwise the vectors are incompatible.
 """
 
-import time                              # For timing how long embedding takes
-from typing import List, Optional        # Type hints
+import time  # For timing how long embedding takes
+from typing import List, Optional  # Type hints
 
-from loguru import logger                # Colored logging
+from loguru import logger  # Colored logging
 
 from src.config import (
-    EMBEDDING_PROVIDER,       # "local" or "openai"
-    OPENAI_API_KEY,           # needed if provider is "openai"
-    OPENAI_EMBEDDING_MODEL,   # "text-embedding-3-small"
-    LOCAL_EMBEDDING_MODEL,    # "all-MiniLM-L6-v2"
+    EMBEDDING_PROVIDER,  # "local" or "openai"
+    OPENAI_API_KEY,  # needed if provider is "openai"
+    OPENAI_EMBEDDING_MODEL,  # "text-embedding-3-small"
+    LOCAL_EMBEDDING_MODEL,  # "all-MiniLM-L6-v2"
 )
 
 
@@ -29,6 +29,7 @@ from src.config import (
 # EMBEDDING MODEL FACTORY
 # Returns the correct embedding model based on config
 # ══════════════════════════════════════════════════════════════════
+
 
 def get_embedding_model(provider: Optional[str] = None):
     """
@@ -178,20 +179,18 @@ def _load_openai_embeddings():
 
     except ImportError:
         raise RuntimeError(
-            "langchain-openai is not installed.\n"
-            "Fix: pip install langchain-openai"
+            "langchain-openai is not installed.\n" "Fix: pip install langchain-openai"
         )
     except ValueError:
         raise
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load OpenAI embedding model: {e}"
-        ) from e
+        raise RuntimeError(f"Failed to load OpenAI embedding model: {e}") from e
 
 
 # ══════════════════════════════════════════════════════════════════
 # EMBEDDING UTILITY FUNCTIONS
 # ══════════════════════════════════════════════════════════════════
+
 
 def embed_texts(texts: List[str], embedding_model) -> List[List[float]]:
     """
@@ -227,8 +226,8 @@ def embed_texts(texts: List[str], embedding_model) -> List[List[float]]:
         # For local: processes all at once on CPU
         vectors = embedding_model.embed_documents(texts)
 
-        elapsed   = time.time() - start_time
-        dims      = len(vectors[0]) if vectors else 0
+        elapsed = time.time() - start_time
+        dims = len(vectors[0]) if vectors else 0
 
         logger.info(
             f"Embedded {len(vectors)} texts in {elapsed:.2f}s | "
@@ -269,8 +268,7 @@ def embed_query(query: str, embedding_model) -> List[float]:
     try:
         if not query or not query.strip():
             raise ValueError(
-                "Query cannot be empty.\n"
-                "Please provide a question or search term."
+                "Query cannot be empty.\n" "Please provide a question or search term."
             )
 
         # embed_query() is optimized for single-text search queries
@@ -286,9 +284,7 @@ def embed_query(query: str, embedding_model) -> List[float]:
     except ValueError:
         raise
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to embed query '{query[:50]}': {e}"
-        ) from e
+        raise RuntimeError(f"Failed to embed query '{query[:50]}': {e}") from e
 
 
 def compute_similarity(text1: str, text2: str, embedding_model) -> float:
@@ -316,7 +312,7 @@ def compute_similarity(text1: str, text2: str, embedding_model) -> float:
         # Returns something like 0.87 (very similar)
     """
     try:
-        import numpy as np   # numpy for the dot product calculation
+        import numpy as np  # numpy for the dot product calculation
 
         # Embed both texts as query vectors
         vec1 = np.array(embedding_model.embed_query(text1))
@@ -335,6 +331,4 @@ def compute_similarity(text1: str, text2: str, embedding_model) -> float:
         return similarity
 
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to compute similarity: {e}"
-        ) from e
+        raise RuntimeError(f"Failed to compute similarity: {e}") from e

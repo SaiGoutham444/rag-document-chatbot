@@ -34,6 +34,7 @@ from src.chunker import split_documents
 # FILE FIXTURES
 # ══════════════════════════════════════════════════════════════════
 
+
 @pytest.fixture
 def sample_pdf_path(tmp_path) -> str:
     """
@@ -100,6 +101,7 @@ def sample_csv_path(tmp_path) -> str:
 # DOCUMENT FIXTURES
 # ══════════════════════════════════════════════════════════════════
 
+
 @pytest.fixture
 def sample_docs() -> List[Document]:
     """
@@ -115,12 +117,12 @@ def sample_docs() -> List[Document]:
                 "driven primarily by enterprise sales in the technology sector."
             ),
             metadata={
-                "source"      : "test_report.pdf",
-                "page"        : 1,
-                "file_type"   : "pdf",
-                "total_pages" : 3,
+                "source": "test_report.pdf",
+                "page": 1,
+                "file_type": "pdf",
+                "total_pages": 3,
                 "file_size_kb": 245.3,
-            }
+            },
         ),
         Document(
             page_content=(
@@ -130,12 +132,12 @@ def sample_docs() -> List[Document]:
                 "R&D spending increased by 12 percent to support new product lines."
             ),
             metadata={
-                "source"      : "test_report.pdf",
-                "page"        : 2,
-                "file_type"   : "pdf",
-                "total_pages" : 3,
+                "source": "test_report.pdf",
+                "page": 2,
+                "file_type": "pdf",
+                "total_pages": 3,
                 "file_size_kb": 245.3,
-            }
+            },
         ),
         Document(
             page_content=(
@@ -145,12 +147,12 @@ def sample_docs() -> List[Document]:
                 "Full year guidance has been raised to $16 million in revenue."
             ),
             metadata={
-                "source"      : "test_report.pdf",
-                "page"        : 3,
-                "file_type"   : "pdf",
-                "total_pages" : 3,
+                "source": "test_report.pdf",
+                "page": 3,
+                "file_type": "pdf",
+                "total_pages": 3,
                 "file_size_kb": 245.3,
-            }
+            },
         ),
     ]
 
@@ -162,15 +164,16 @@ def sample_chunks(sample_docs) -> List[Document]:
     Uses real split_documents() with small chunk size for testing.
     """
     return split_documents(
-        documents     = sample_docs,
-        chunk_size    = 200,
-        chunk_overlap = 20,
+        documents=sample_docs,
+        chunk_size=200,
+        chunk_overlap=20,
     )
 
 
 # ══════════════════════════════════════════════════════════════════
 # MOCK FIXTURES
 # ══════════════════════════════════════════════════════════════════
+
 
 @pytest.fixture
 def mock_llm():
@@ -195,9 +198,7 @@ def mock_llm():
 
     # Simulate .stream() yielding tokens
     tokens = ["The ", "Q3 ", "revenue ", "was ", "$4.2 ", "million."]
-    mock.stream.return_value = iter([
-        MagicMock(content=token) for token in tokens
-    ])
+    mock.stream.return_value = iter([MagicMock(content=token) for token in tokens])
 
     return mock
 
@@ -213,17 +214,14 @@ def mock_embedding_model():
 
     # embed_documents: returns list of 384-dim random vectors
     def fake_embed_documents(texts):
-        return [
-            np.random.rand(384).tolist()
-            for _ in texts
-        ]
+        return [np.random.rand(384).tolist() for _ in texts]
 
     # embed_query: returns single 384-dim random vector
     def fake_embed_query(text):
         return np.random.rand(384).tolist()
 
     mock.embed_documents = fake_embed_documents
-    mock.embed_query     = fake_embed_query
+    mock.embed_query = fake_embed_query
 
     return mock
 
@@ -231,6 +229,7 @@ def mock_embedding_model():
 # ══════════════════════════════════════════════════════════════════
 # INFRASTRUCTURE FIXTURES
 # ══════════════════════════════════════════════════════════════════
+
 
 @pytest.fixture
 def temp_chroma_dir(tmp_path) -> str:
