@@ -4,9 +4,6 @@ test_citation_enforcer.py — Unit Tests for Citation Enforcer
 """
 
 import pytest
-from langchain_core.documents import Document
-
-from src.citation_enforcer import CitationEnforcer, CitationRef
 
 
 class TestBuildContextWithIds:
@@ -168,7 +165,7 @@ class TestEnforceCitations:
             answer="I cannot find this information in the provided document.",
             retrieved_chunks=sample_chunks,
         )
-        assert enforced.is_valid == True
+        assert enforced.is_valid is True
         assert enforced.report.coverage_score == 1.0
         assert enforced.citations == []
 
@@ -180,7 +177,7 @@ class TestEnforceCitations:
             f"[SOURCE: test.pdf | PAGE: 1 | CHUNK: {real_id}]."
         )
         enforced = citation_enforcer.enforce_citations(answer, sample_chunks)
-        assert enforced.is_valid == True
+        assert enforced.is_valid is True
 
     def test_returns_enforced_answer_object(
         self, citation_enforcer, sample_chunks, sample_citation_answer

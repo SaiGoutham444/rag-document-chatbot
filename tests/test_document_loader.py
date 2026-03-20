@@ -6,12 +6,9 @@ Tests every loader function and the master load_document() router.
 
 import pytest
 from pathlib import Path
-from langchain_core.documents import Document
 
 from src.document_loader import (
     load_document,
-    load_txt,
-    load_csv,
     validate_file,
     get_document_info,
 )

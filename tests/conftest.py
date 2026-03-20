@@ -15,12 +15,9 @@ Fixtures provided:
   citation_enforcer     : real CitationEnforcer instance
 """
 
-import os
-import shutil
-import tempfile
 from pathlib import Path
 from typing import List
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
