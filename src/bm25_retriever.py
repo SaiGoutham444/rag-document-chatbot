@@ -68,7 +68,9 @@ def tokenize(text: str) -> List[str]:
     """
     if not text:
         return []
-
+    # Insert spaces between camelCase words (e.g. "QuarterlyRevenue" → "Quarterly Revenue")
+    import re
+    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
     # Step 1: Convert to lowercase
     text = text.lower()
 
