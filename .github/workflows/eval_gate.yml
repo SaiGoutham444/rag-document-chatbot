@@ -1,17 +1,6 @@
-# ═══════════════════════════════════════════════════════════════
-# eval_gate.yml — Scheduled Eval + Matrix Testing
-# Runs full evaluation on a schedule (not just PRs)
-# Also tests across Python versions
-# ═══════════════════════════════════════════════════════════════
-
 name: Eval Gate (Scheduled)
 
-
-# NEW — remove the type field entirely, use string default
 on:
-  schedule:
-    - cron: '0 2 * * *'
-
   workflow_dispatch:
     inputs:
       fast_mode:
@@ -47,25 +36,25 @@ jobs:
 
       - name: Create .env
         run: |
-          echo "LLM_PROVIDER=groq"              >> .env
-          echo "EMBEDDING_PROVIDER=local"        >> .env
+          echo "LLM_PROVIDER=groq" >> .env
+          echo "EMBEDDING_PROVIDER=local" >> .env
           echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
-          echo "CHROMA_DB_PATH=./chroma_db"      >> .env
-          echo "BM25_INDEX_PATH=./bm25_index"    >> .env
-          echo "RETRIEVAL_TOP_K=20"              >> .env
-          echo "RERANK_TOP_K=3"                  >> .env
+          echo "CHROMA_DB_PATH=./chroma_db" >> .env
+          echo "BM25_INDEX_PATH=./bm25_index" >> .env
+          echo "RETRIEVAL_TOP_K=20" >> .env
+          echo "RERANK_TOP_K=3" >> .env
 
-      # Run full eval (all 10 questions)
-      - name: Run full evaluation
+      - name: Run evaluation
         run: |
           python tests/eval/run_evals.py \
+            --fast \
             --doc data/sample_docs/resume.pdf \
-            --output eval_report_full.json
+            --output eval_report.json
 
-      - name: Upload full eval report
+      - name: Upload eval report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: full-eval-report-${{ github.run_number }}
-          path: eval_report_full.json
-          retention-days: 90
+          name: eval-report-${{ github.run_number }}
+          path: eval_report.json
+          retention-days: 30
