@@ -107,8 +107,13 @@ def _get_groq_llm():
     """
     Creates Groq LLM instance (FREE, ultra-fast inference).
 
-    Handles the 'proxies' error on Streamlit Cloud by patching
-    the httpx client before initializing the Groq connection.
+    Uses monkey-patching to fix the 'proxies' error that occurs
+    on Streamlit Cloud with newer httpx versions.
+
+    groq==0.9.0 + langchain-groq==0.1.9 pass 'proxies' to httpx
+    internally. Newer httpx removed this parameter → crash.
+    We patch httpx.Client.__init__ and httpx.AsyncClient.__init__
+    to silently drop 'proxies' before it causes an error.
 
     Returns:
         ChatGroq instance
@@ -118,6 +123,29 @@ def _get_groq_llm():
         RuntimeError: connection fails
     """
     try:
+        # ── STEP 1: Monkey-patch httpx BEFORE importing langchain_groq
+        # This must happen before any groq/httpx initialization
+        import httpx
+
+        # Patch synchronous Client
+        _orig_client = httpx.Client.__init__
+
+        def _patched_client(self, *args, **kwargs):
+            kwargs.pop("proxies", None)
+            _orig_client(self, *args, **kwargs)
+
+        httpx.Client.__init__ = _patched_client
+
+        # Patch asynchronous AsyncClient
+        _orig_async = httpx.AsyncClient.__init__
+
+        def _patched_async(self, *args, **kwargs):
+            kwargs.pop("proxies", None)
+            _orig_async(self, *args, **kwargs)
+
+        httpx.AsyncClient.__init__ = _patched_async
+
+        # ── STEP 2: Now safe to import and use langchain_groq
         from langchain_groq import ChatGroq
 
         if not GROQ_API_KEY:
@@ -126,24 +154,10 @@ def _get_groq_llm():
                 "Get your FREE key: https://console.groq.com"
             )
 
-        # Set API key in environment explicitly
-        # Required for Streamlit Cloud where secrets are injected
+        # Set in os.environ so groq SDK can find it
         os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 
-        # ── Patch for Streamlit Cloud compatibility ──────────────
-        # Newer httpx versions removed 'proxies' parameter
-        # This patch prevents the ChatGroq init from passing it
-        try:
-            import httpx
-            # Create a clean httpx client without proxies
-            _http_client = httpx.Client(
-                timeout = httpx.Timeout(60.0),
-            )
-        except Exception:
-            _http_client = None
-
-        # Initialize ChatGroq with explicit parameters only
-        # Avoid any kwargs that might include 'proxies'
+        # ── STEP 3: Initialize the LLM
         llm = ChatGroq(
             model        = GROQ_LLM_MODEL,
             temperature  = LLM_TEMPERATURE,
@@ -155,7 +169,7 @@ def _get_groq_llm():
             f"Groq LLM ready | "
             f"Model: {GROQ_LLM_MODEL} | "
             f"Temperature: {LLM_TEMPERATURE} | "
-            f"Context limit: {CONTEXT_WINDOW_LIMITS.get(GROQ_LLM_MODEL, 128000)} tokens"
+            f"Context: {CONTEXT_WINDOW_LIMITS.get(GROQ_LLM_MODEL, 128000)} tokens"
         )
         return llm
 
