@@ -1,0 +1,9 @@
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
+
+[runner]
+# Allow HTML in markdown
+fastReruns = true

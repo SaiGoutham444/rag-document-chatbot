@@ -1,0 +1,244 @@
+# ═══════════════════════════════════════════════════════════════
+# ci.yml — Main CI Pipeline
+# Runs on every push and pull request.
+# Jobs: lint → test → eval-gate (PR only)
+# ═══════════════════════════════════════════════════════════════
+
+name: CI Pipeline
+
+# ── Triggers ──────────────────────────────────────────────────
+on:
+  push:
+    # Run on every push to ANY branch
+    branches: ['**']
+  pull_request:
+    # Run on every PR targeting main
+    branches: [main]
+
+# ══════════════════════════════════════════════════════════════
+# JOB 1: LINT
+# Checks code style — must pass before tests run
+# ══════════════════════════════════════════════════════════════
+
+jobs:
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Download the repository code onto the runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Install Python 3.11 on the runner
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Step 3: Cache pip packages to speed up future runs
+      # Cache key = OS + python version + requirements hash
+      # If requirements.txt changes → cache is invalidated → fresh install
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # Step 4: Install only dev tools (black, ruff) — faster than full install
+      - name: Install dev dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      # Step 5: Run ruff — catches undefined variables, unused imports, bugs
+      # --output-format=github: formats errors for GitHub's annotation system
+      # Errors appear as inline code annotations in the PR diff
+      - name: Run ruff linter
+        run: ruff check src/ tests/ --output-format=github
+
+      # Step 6: Run black in check mode — reports formatting issues without fixing
+      # If any file would be changed by black → this step FAILS → job fails
+      - name: Check black formatting
+        run: black --check src/ tests/ --diff
+
+# ══════════════════════════════════════════════════════════════
+# JOB 2: TEST
+# Runs all unit tests with coverage reporting
+# Only runs if lint job passed (needs: lint)
+# ══════════════════════════════════════════════════════════════
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint    # ← only runs if lint passes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Cache full requirements (including ML libs) for test job
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-full-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-full-
+
+      # Install everything — tests need the full project dependencies
+      - name: Install all dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      # Create .env file from GitHub Secrets
+      # Secrets are encrypted variables set in repo Settings → Secrets
+      # They're never visible in logs — GitHub masks them automatically
+      - name: Create .env file
+        run: |
+          echo "LLM_PROVIDER=groq"              >> .env
+          echo "EMBEDDING_PROVIDER=local"        >> .env
+          echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
+          echo "CHROMA_DB_PATH=./chroma_db"      >> .env
+          echo "BM25_INDEX_PATH=./bm25_index"    >> .env
+          echo "RETRIEVAL_TOP_K=20"              >> .env
+          echo "RERANK_TOP_K=5"                  >> .env
+          echo "MIN_CITATION_SCORE=0.7"          >> .env
+
+      # Run pytest with:
+      # -v: verbose output (each test name shown)
+      # --cov=src: measure coverage of src/ folder
+      # --cov-report=xml: saves coverage.xml for upload
+      # --cov-report=term-missing: shows uncovered lines in terminal
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ -v \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --ignore=tests/eval
+
+      # Upload coverage report as a build artifact
+      # Available to download from the Actions run page for 7 days
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()   # upload even if tests fail (helps debugging)
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+# ══════════════════════════════════════════════════════════════
+# JOB 3: EVAL GATE
+# Runs RAG evaluation — only on PRs to main
+# Blocks merge if any metric falls below threshold
+# ══════════════════════════════════════════════════════════════
+
+  eval-gate:
+    name: RAG Quality Gate
+    runs-on: ubuntu-latest
+    needs: test    # ← only runs if tests pass
+
+    # ONLY runs on pull requests to main branch
+    # Skips on direct pushes — eval is expensive (~2 minutes)
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-full-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-full-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Create .env file
+        run: |
+          echo "LLM_PROVIDER=groq"              >> .env
+          echo "EMBEDDING_PROVIDER=local"        >> .env
+          echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
+          echo "CHROMA_DB_PATH=./chroma_db"      >> .env
+          echo "BM25_INDEX_PATH=./bm25_index"    >> .env
+          echo "RETRIEVAL_TOP_K=20"              >> .env
+          echo "RERANK_TOP_K=3"                  >> .env
+          echo "MIN_CITATION_SCORE=0.7"          >> .env
+
+      # Run fast eval (3 questions) to keep CI under 5 minutes
+      # --fast flag runs only first 3 questions from eval_dataset.json
+      # exit code 0 = gate passed, exit code 1 = gate failed (blocks PR)
+      - name: Run RAG evaluation
+        run: |
+          python tests/eval/run_evals.py \
+            --fast \
+            --doc data/sample_docs/resume.pdf \
+            --output eval_report.json
+
+      # Save eval report as artifact so you can read scores in Actions UI
+      - name: Upload eval report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: eval_report.json
+          retention-days: 30
+
+      # Post eval scores as a comment on the PR
+      # So reviewers can see the scores without downloading the artifact
+      - name: Post eval scores to PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const report = JSON.parse(fs.readFileSync('eval_report.json', 'utf8'));
+              const avg    = report.averages;
+              const passed = report.quality_gate_passed;
+              const icon   = passed ? '✅' : '❌';
+
+              const body = `## ${icon} RAG Quality Gate ${passed ? 'PASSED' : 'FAILED'}
+
+            | Metric | Score | Threshold | Status |
+            |--------|-------|-----------|--------|
+            | Faithfulness | ${avg.faithfulness.toFixed(3)} | 0.40 | ${avg.faithfulness >= 0.40 ? '✅' : '❌'} |
+            | Answer Relevancy | ${avg.answer_relevancy.toFixed(3)} | 0.55 | ${avg.answer_relevancy >= 0.55 ? '✅' : '❌'} |
+            | Context Recall | ${avg.context_recall.toFixed(3)} | 0.65 | ${avg.context_recall >= 0.65 ? '✅' : '❌'} |
+            | Context Precision | ${avg.context_precision.toFixed(3)} | 0.65 | ${avg.context_precision >= 0.65 ? '✅' : '❌'} |
+            | Citation Coverage | ${avg.citation_coverage.toFixed(3)} | 0.40 | ${avg.citation_coverage >= 0.40 ? '✅' : '❌'} |
+            | **Overall** | **${avg.overall_score.toFixed(3)}** | 0.60 | ${avg.overall_score >= 0.60 ? '✅' : '❌'} |
+
+            > Evaluated on ${report.total_questions} questions from \`eval_dataset.json\`
+            `;
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body,
+              });
+            } catch(e) {
+              console.log('Could not post comment:', e.message);
+            }
