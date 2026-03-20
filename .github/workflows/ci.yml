@@ -94,6 +94,11 @@ jobs:
             ${{ runner.os }}-pip-full-
 
       # Install everything — tests need the full project dependencies
+      - name: Install system dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y libmagic1 libmagic-dev
+
       - name: Install all dependencies
         run: |
           pip install --upgrade pip

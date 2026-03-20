@@ -35,4 +35,4 @@ ragas==0.1.14
 datasets==2.20.0
 # docx2txt — extracts text from .docx Word files
 docx2txt==0.8
-libmagic1
+python-magic==0.4.27
