@@ -45,6 +45,7 @@ from tests.eval.metrics import (
 # DATASET LOADING
 # ══════════════════════════════════════════════════════════════════
 
+
 def load_eval_dataset(path: str = "tests/eval/eval_dataset.json") -> List[Dict]:
     """
     Loads the ground truth evaluation dataset from JSON.
@@ -77,9 +78,7 @@ def load_eval_dataset(path: str = "tests/eval/eval_dataset.json") -> List[Dict]:
     for i, item in enumerate(dataset):
         for key in required_keys:
             if key not in item:
-                raise ValueError(
-                    f"Item {i} missing required key: '{key}'"
-                )
+                raise ValueError(f"Item {i} missing required key: '{key}'")
 
     logger.info(f"Loaded {len(dataset)} eval questions from '{path}'")
     return dataset
@@ -89,9 +88,10 @@ def load_eval_dataset(path: str = "tests/eval/eval_dataset.json") -> List[Dict]:
 # SINGLE QUESTION EVALUATION
 # ══════════════════════════════════════════════════════════════════
 
+
 def run_single_eval(
-    pipeline  : RAGPipeline,
-    eval_case : Dict,
+    pipeline: RAGPipeline,
+    eval_case: Dict,
 ) -> EvalResult:
     """
     Runs the full pipeline on one question and computes all metrics.
@@ -108,61 +108,61 @@ def run_single_eval(
     Returns:
         EvalResult with all metric scores
     """
-    question     = eval_case["question"]
+    question = eval_case["question"]
     ground_truth = eval_case["ground_truth"]
-    category     = eval_case.get("category", "general")
+    category = eval_case.get("category", "general")
 
     logger.info(f"Evaluating: '{question[:60]}'")
 
     result = EvalResult(
-        question        = question,
-        ground_truth    = ground_truth,
-        generated_answer= "",
-        category        = category,
+        question=question,
+        ground_truth=ground_truth,
+        generated_answer="",
+        category=category,
     )
 
     try:
         # ── Run the pipeline ─────────────────────────────────────────
-        start   = time.time()
-        response= pipeline.query(question)
+        start = time.time()
+        response = pipeline.query(question)
         elapsed = time.time() - start
 
         result.generated_answer = response.answer
 
         # ── Compute metrics ──────────────────────────────────────────
         result.faithfulness = compute_faithfulness(
-            answer         = response.answer,
-            context_chunks = response.source_chunks,
+            answer=response.answer,
+            context_chunks=response.source_chunks,
         )
 
         result.answer_relevancy = compute_answer_relevancy(
-            question        = question,
-            answer          = response.answer,
-            embedding_model = pipeline.embedding_model,
+            question=question,
+            answer=response.answer,
+            embedding_model=pipeline.embedding_model,
         )
 
         result.context_recall = compute_context_recall(
-            question       = question,
-            ground_truth   = ground_truth,
-            context_chunks = response.source_chunks,
+            question=question,
+            ground_truth=ground_truth,
+            context_chunks=response.source_chunks,
         )
 
         result.context_precision = compute_context_precision(
-            question       = question,
-            context_chunks = response.source_chunks,
-            ground_truth   = ground_truth,
+            question=question,
+            context_chunks=response.source_chunks,
+            ground_truth=ground_truth,
         )
 
         result.citation_coverage = compute_citation_coverage(
-            answer = response.answer,
+            answer=response.answer,
         )
 
         result.overall_score = compute_overall_score(
-            faithfulness      = result.faithfulness,
-            answer_relevancy  = result.answer_relevancy,
-            context_recall    = result.context_recall,
-            context_precision = result.context_precision,
-            citation_coverage = result.citation_coverage,
+            faithfulness=result.faithfulness,
+            answer_relevancy=result.answer_relevancy,
+            context_recall=result.context_recall,
+            context_precision=result.context_precision,
+            citation_coverage=result.citation_coverage,
         )
 
         logger.info(
@@ -186,9 +186,10 @@ def run_single_eval(
 # FULL EVALUATION RUN
 # ══════════════════════════════════════════════════════════════════
 
+
 def run_full_eval(
-    pipeline     : RAGPipeline,
-    dataset      : List[Dict],
+    pipeline: RAGPipeline,
+    dataset: List[Dict],
 ) -> EvalReport:
     """
     Runs evaluation on all questions in the dataset.
@@ -200,7 +201,7 @@ def run_full_eval(
     Returns:
         EvalReport with per-question results and averages
     """
-    report  = EvalReport()
+    report = EvalReport()
     results = []
 
     logger.info(f"Starting full evaluation | {len(dataset)} questions")
@@ -214,25 +215,34 @@ def run_full_eval(
     # ── Aggregate results ────────────────────────────────────────
     valid_results = [r for r in results if r.error is None]
 
-    report.results          = results
-    report.total_questions  = len(results)
+    report.results = results
+    report.total_questions = len(results)
 
     if valid_results:
-        report.avg_faithfulness     = sum(r.faithfulness       for r in valid_results) / len(valid_results)
-        report.avg_answer_relevancy = sum(r.answer_relevancy   for r in valid_results) / len(valid_results)
-        report.avg_context_recall   = sum(r.context_recall     for r in valid_results) / len(valid_results)
-        report.avg_context_precision= sum(r.context_precision  for r in valid_results) / len(valid_results)
-        report.avg_citation_coverage= sum(r.citation_coverage  for r in valid_results) / len(valid_results)
-        report.avg_overall_score    = sum(r.overall_score      for r in valid_results) / len(valid_results)
+        report.avg_faithfulness = sum(r.faithfulness for r in valid_results) / len(
+            valid_results
+        )
+        report.avg_answer_relevancy = sum(
+            r.answer_relevancy for r in valid_results
+        ) / len(valid_results)
+        report.avg_context_recall = sum(r.context_recall for r in valid_results) / len(
+            valid_results
+        )
+        report.avg_context_precision = sum(
+            r.context_precision for r in valid_results
+        ) / len(valid_results)
+        report.avg_citation_coverage = sum(
+            r.citation_coverage for r in valid_results
+        ) / len(valid_results)
+        report.avg_overall_score = sum(r.overall_score for r in valid_results) / len(
+            valid_results
+        )
 
     # ── Quality gate check ───────────────────────────────────────
     report.quality_gate_passed = check_quality_gate(report)
 
     # ── Count passed questions ───────────────────────────────────
-    report.passed_questions = sum(
-        1 for r in valid_results
-        if r.overall_score >= 0.60
-    )
+    report.passed_questions = sum(1 for r in valid_results if r.overall_score >= 0.60)
 
     elapsed = time.time() - eval_start
     logger.info(
@@ -246,6 +256,7 @@ def run_full_eval(
 # ══════════════════════════════════════════════════════════════════
 # QUALITY GATE
 # ══════════════════════════════════════════════════════════════════
+
 
 def check_quality_gate(report: EvalReport) -> bool:
     """
@@ -266,9 +277,9 @@ def check_quality_gate(report: EvalReport) -> bool:
         True if quality gate passes, False if it fails
     """
     checks = {
-        "faithfulness"     : report.avg_faithfulness,
-        "answer_relevancy" : report.avg_answer_relevancy,
-        "context_recall"   : report.avg_context_recall,
+        "faithfulness": report.avg_faithfulness,
+        "answer_relevancy": report.avg_answer_relevancy,
+        "context_recall": report.avg_context_recall,
         "context_precision": report.avg_context_precision,
         "citation_coverage": report.avg_citation_coverage,
     }
@@ -277,12 +288,11 @@ def check_quality_gate(report: EvalReport) -> bool:
 
     for metric, score in checks.items():
         threshold = EVAL_THRESHOLDS.get(metric, 0.70)
-        passed    = score >= threshold
-        status    = "✅ PASS" if passed else "❌ FAIL"
+        passed = score >= threshold
+        status = "✅ PASS" if passed else "❌ FAIL"
 
         logger.info(
-            f"  {status} | {metric:20s}: "
-            f"{score:.3f} (threshold: {threshold:.2f})"
+            f"  {status} | {metric:20s}: " f"{score:.3f} (threshold: {threshold:.2f})"
         )
 
         if not passed:
@@ -295,6 +305,7 @@ def check_quality_gate(report: EvalReport) -> bool:
 # REPORT SAVING
 # ══════════════════════════════════════════════════════════════════
 
+
 def save_eval_report(report: EvalReport, path: str = "eval_report.json"):
     """
     Saves the evaluation report to a JSON file.
@@ -305,33 +316,33 @@ def save_eval_report(report: EvalReport, path: str = "eval_report.json"):
         path  : output file path
     """
     report_dict = {
-        "timestamp"            : datetime.now().isoformat(),
-        "total_questions"      : report.total_questions,
-        "passed_questions"     : report.passed_questions,
-        "quality_gate_passed"  : report.quality_gate_passed,
+        "timestamp": datetime.now().isoformat(),
+        "total_questions": report.total_questions,
+        "passed_questions": report.passed_questions,
+        "quality_gate_passed": report.quality_gate_passed,
         "averages": {
-            "faithfulness"     : round(report.avg_faithfulness,     4),
-            "answer_relevancy" : round(report.avg_answer_relevancy, 4),
-            "context_recall"   : round(report.avg_context_recall,   4),
-            "context_precision": round(report.avg_context_precision,4),
-            "citation_coverage": round(report.avg_citation_coverage,4),
-            "overall_score"    : round(report.avg_overall_score,    4),
+            "faithfulness": round(report.avg_faithfulness, 4),
+            "answer_relevancy": round(report.avg_answer_relevancy, 4),
+            "context_recall": round(report.avg_context_recall, 4),
+            "context_precision": round(report.avg_context_precision, 4),
+            "citation_coverage": round(report.avg_citation_coverage, 4),
+            "overall_score": round(report.avg_overall_score, 4),
         },
         "thresholds": EVAL_THRESHOLDS,
         "per_question": [
             {
-                "question"         : r.question,
-                "category"         : r.category,
-                "faithfulness"     : r.faithfulness,
-                "answer_relevancy" : r.answer_relevancy,
-                "context_recall"   : r.context_recall,
+                "question": r.question,
+                "category": r.category,
+                "faithfulness": r.faithfulness,
+                "answer_relevancy": r.answer_relevancy,
+                "context_recall": r.context_recall,
                 "context_precision": r.context_precision,
                 "citation_coverage": r.citation_coverage,
-                "overall_score"    : r.overall_score,
-                "error"            : r.error,
+                "overall_score": r.overall_score,
+                "error": r.error,
             }
             for r in report.results
-        ]
+        ],
     }
 
     with open(path, "w", encoding="utf-8") as f:
@@ -343,6 +354,7 @@ def save_eval_report(report: EvalReport, path: str = "eval_report.json"):
 # ══════════════════════════════════════════════════════════════════
 # PRETTY PRINT
 # ══════════════════════════════════════════════════════════════════
+
 
 def print_eval_summary(report: EvalReport):
     """
@@ -361,10 +373,10 @@ def print_eval_summary(report: EvalReport):
     print("-" * 65)
 
     for r in report.results:
-        status  = "✅" if r.error is None else "❌"
+        status = "✅" if r.error is None else "❌"
         overall = f"{r.overall_score:.3f}" if r.error is None else "ERROR"
-        faith   = f"{r.faithfulness:.3f}"  if r.error is None else "  -  "
-        rel     = f"{r.answer_relevancy:.3f}" if r.error is None else "  -  "
+        faith = f"{r.faithfulness:.3f}" if r.error is None else "  -  "
+        rel = f"{r.answer_relevancy:.3f}" if r.error is None else "  -  "
         q_short = r.question[:43] + ".." if len(r.question) > 43 else r.question
 
         print(f"{status} {q_short:<44} {overall:>7} {faith:>7} {rel:>6}")
@@ -393,6 +405,7 @@ def print_eval_summary(report: EvalReport):
 # MAIN ENTRY POINT
 # ══════════════════════════════════════════════════════════════════
 
+
 def main():
     """
     Main evaluation runner.
@@ -402,20 +415,20 @@ def main():
     parser = argparse.ArgumentParser(description="Run RAG evaluation")
     parser.add_argument(
         "--fast",
-        action  = "store_true",
-        help    = "Run only first 3 questions (faster, for development)"
+        action="store_true",
+        help="Run only first 3 questions (faster, for development)",
     )
     parser.add_argument(
         "--doc",
-        type    = str,
-        default = "data/sample_docs/resume.pdf",
-        help    = "Path to document to evaluate against"
+        type=str,
+        default="data/sample_docs/resume.pdf",
+        help="Path to document to evaluate against",
     )
     parser.add_argument(
         "--output",
-        type    = str,
-        default = "eval_report.json",
-        help    = "Path to save the eval report JSON"
+        type=str,
+        default="eval_report.json",
+        help="Path to save the eval report JSON",
     )
     args = parser.parse_args()
 

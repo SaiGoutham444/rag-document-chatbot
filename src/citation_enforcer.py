@@ -18,20 +18,21 @@ WHY this matters:
   Invalid citations (hallucinated chunk IDs) are flagged.
 """
 
-import re                                       # Regex for parsing citations
-from dataclasses import dataclass, field        # Clean data containers
-from typing import List, Dict, Optional, Tuple  # Type hints
+import re  # Regex for parsing citations
+from dataclasses import dataclass, field  # Clean data containers
+from typing import List  # Type hints
 
 from langchain_core.documents import Document
 from loguru import logger
 
-from src.config import MIN_CITATION_SCORE       # Threshold from config
+from src.config import MIN_CITATION_SCORE  # Threshold from config
 
 
 # ══════════════════════════════════════════════════════════════════
 # DATA CLASSES
 # Clean containers for citation data passed between functions
 # ══════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class CitationRef:
@@ -48,11 +49,12 @@ class CitationRef:
       raw_tag   : the original citation string as written by LLM
       is_valid  : True if chunk_id matches a retrieved chunk
     """
-    chunk_id  : str
-    filename  : str
-    page      : str
-    raw_tag   : str
-    is_valid  : bool = False    # set by validate_citations()
+
+    chunk_id: str
+    filename: str
+    page: str
+    raw_tag: str
+    is_valid: bool = False  # set by validate_citations()
 
 
 @dataclass
@@ -68,12 +70,13 @@ class CitationReport:
       total_claims     : approximate number of factual sentences
       warnings         : list of warning messages
     """
-    all_citations     : List[CitationRef] = field(default_factory=list)
-    valid_citations   : List[CitationRef] = field(default_factory=list)
-    invalid_citations : List[CitationRef] = field(default_factory=list)
-    coverage_score    : float             = 0.0
-    total_claims      : int               = 0
-    warnings          : List[str]         = field(default_factory=list)
+
+    all_citations: List[CitationRef] = field(default_factory=list)
+    valid_citations: List[CitationRef] = field(default_factory=list)
+    invalid_citations: List[CitationRef] = field(default_factory=list)
+    coverage_score: float = 0.0
+    total_claims: int = 0
+    warnings: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -88,16 +91,18 @@ class EnforcedAnswer:
       is_valid      : True if coverage_score >= MIN_CITATION_SCORE
       source_chunks : the actual Document objects that were cited
     """
-    answer        : str
-    citations     : List[CitationRef]
-    report        : CitationReport
-    is_valid      : bool
-    source_chunks : List[Document] = field(default_factory=list)
+
+    answer: str
+    citations: List[CitationRef]
+    report: CitationReport
+    is_valid: bool
+    source_chunks: List[Document] = field(default_factory=list)
 
 
 # ══════════════════════════════════════════════════════════════════
 # CITATION ENFORCER CLASS
 # ══════════════════════════════════════════════════════════════════
+
 
 class CitationEnforcer:
     """
@@ -180,9 +185,9 @@ class CitationEnforcer:
 
         for i, chunk in enumerate(chunks, start=1):
             # Extract metadata for the header label
-            source   = chunk.metadata.get("source",    "unknown")
-            page     = chunk.metadata.get("page",      "?")
-            chunk_id = chunk.metadata.get("chunk_id",  f"chunk_{i}")
+            source = chunk.metadata.get("source", "unknown")
+            page = chunk.metadata.get("page", "?")
+            chunk_id = chunk.metadata.get("chunk_id", f"chunk_{i}")
 
             # Build the chunk header — this is what the LLM will cite
             header = (
@@ -193,11 +198,7 @@ class CitationEnforcer:
             )
 
             # Combine header + content + separator
-            chunk_block = (
-                f"{header}\n"
-                f"{chunk.page_content.strip()}\n"
-                f"{'─' * 68}"
-            )
+            chunk_block = f"{header}\n" f"{chunk.page_content.strip()}\n" f"{'─' * 68}"
 
             context_parts.append(chunk_block)
 
@@ -213,8 +214,8 @@ class CitationEnforcer:
 
     def build_citation_prompt(
         self,
-        query   : str,
-        context : str,
+        query: str,
+        context: str,
     ) -> str:
         """
         Builds the complete prompt that forces the LLM to cite sources.
@@ -340,35 +341,36 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
         # ([^\]]+)       → capture group 3: chunk ID (anything except ])
         # \]             → closing bracket
         pattern = re.compile(
-            r'\[SOURCE:\s*([^\|]+)\|\s*PAGE:\s*([^\|]+)\|\s*CHUNK:\s*([^\]]+)\]',
-            re.IGNORECASE,   # case-insensitive matching
+            r"\[SOURCE:\s*([^\|]+)\|\s*PAGE:\s*([^\|]+)\|\s*CHUNK:\s*([^\]]+)\]",
+            re.IGNORECASE,  # case-insensitive matching
         )
 
         citations = []
-        seen_tags = set()   # track duplicates
+        seen_tags = set()  # track duplicates
 
         for match in pattern.finditer(answer):
-            raw_tag  = match.group(0).strip()   # full [SOURCE: ...] string
-            filename = match.group(1).strip()   # "report.pdf"
-            page     = match.group(2).strip()   # "3"
-            chunk_id = match.group(3).strip()   # "report_pdf_p3_c2_a1b2"
+            raw_tag = match.group(0).strip()  # full [SOURCE: ...] string
+            filename = match.group(1).strip()  # "report.pdf"
+            page = match.group(2).strip()  # "3"
+            chunk_id = match.group(3).strip()  # "report_pdf_p3_c2_a1b2"
 
             # Skip exact duplicate citations (same tag appearing twice)
             if raw_tag in seen_tags:
                 continue
             seen_tags.add(raw_tag)
 
-            citations.append(CitationRef(
-                chunk_id = chunk_id,
-                filename = filename,
-                page     = page,
-                raw_tag  = raw_tag,
-                is_valid = False,    # set during validation
-            ))
+            citations.append(
+                CitationRef(
+                    chunk_id=chunk_id,
+                    filename=filename,
+                    page=page,
+                    raw_tag=raw_tag,
+                    is_valid=False,  # set during validation
+                )
+            )
 
         logger.debug(
-            f"Parsed {len(citations)} citations from answer "
-            f"({len(answer)} chars)"
+            f"Parsed {len(citations)} citations from answer " f"({len(answer)} chars)"
         )
         return citations
 
@@ -378,8 +380,8 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
 
     def validate_citations(
         self,
-        citations        : List[CitationRef],
-        retrieved_chunks : List[Document],
+        citations: List[CitationRef],
+        retrieved_chunks: List[Document],
     ) -> CitationReport:
         """
         Validates that each citation references an actual retrieved chunk.
@@ -403,13 +405,12 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
         # Build a set of valid chunk IDs from retrieved chunks
         # Using a set for O(1) lookup instead of O(N) list search
         valid_chunk_ids = {
-            chunk.metadata.get("chunk_id", "")
-            for chunk in retrieved_chunks
+            chunk.metadata.get("chunk_id", "") for chunk in retrieved_chunks
         }
 
         report = CitationReport()
-        report.all_citations  = citations
-        report.total_claims   = len(citations)
+        report.all_citations = citations
+        report.total_claims = len(citations)
 
         for citation in citations:
             # Check if cited chunk_id exists in our retrieved set
@@ -431,9 +432,7 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
 
         # Calculate coverage score
         if len(citations) > 0:
-            report.coverage_score = (
-                len(report.valid_citations) / len(citations)
-            )
+            report.coverage_score = len(report.valid_citations) / len(citations)
         else:
             # No citations found at all
             report.coverage_score = 0.0
@@ -457,8 +456,8 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
 
     def link_citations_to_chunks(
         self,
-        citations        : List[CitationRef],
-        retrieved_chunks : List[Document],
+        citations: List[CitationRef],
+        retrieved_chunks: List[Document],
     ) -> List[Document]:
         """
         Finds the actual Document objects for each valid citation.
@@ -476,12 +475,11 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
         """
         # Build lookup: chunk_id → Document
         chunk_lookup = {
-            chunk.metadata.get("chunk_id", ""): chunk
-            for chunk in retrieved_chunks
+            chunk.metadata.get("chunk_id", ""): chunk for chunk in retrieved_chunks
         }
 
         linked_chunks = []
-        seen_ids      = set()
+        seen_ids = set()
 
         for citation in citations:
             if citation.is_valid and citation.chunk_id not in seen_ids:
@@ -520,7 +518,7 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
             return 0
 
         # Split into sentences on period, exclamation, or newline
-        sentences = re.split(r'[.!\n]+', answer)
+        sentences = re.split(r"[.!\n]+", answer)
 
         # Count sentences that look like factual statements
         factual_count = 0
@@ -541,7 +539,7 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
 
             factual_count += 1
 
-        return max(factual_count, 1)   # at least 1 to avoid division by zero
+        return max(factual_count, 1)  # at least 1 to avoid division by zero
 
     # ──────────────────────────────────────────────────────────────
     # MAIN ENFORCEMENT FUNCTION
@@ -550,8 +548,8 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
 
     def enforce_citations(
         self,
-        answer           : str,
-        retrieved_chunks : List[Document],
+        answer: str,
+        retrieved_chunks: List[Document],
     ) -> EnforcedAnswer:
         """
         Full citation enforcement pipeline for one LLM response.
@@ -602,14 +600,14 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
                     "no citations needed"
                 )
                 return EnforcedAnswer(
-                    answer        = answer,
-                    citations     = [],
-                    report        = CitationReport(
-                        coverage_score=1.0,   # perfect — correct behavior
+                    answer=answer,
+                    citations=[],
+                    report=CitationReport(
+                        coverage_score=1.0,  # perfect — correct behavior
                         warnings=["LLM correctly declined to answer"],
                     ),
-                    is_valid      = True,
-                    source_chunks = [],
+                    is_valid=True,
+                    source_chunks=[],
                 )
 
             # ── Step 2: Parse citations from answer ─────────────────
@@ -619,9 +617,7 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
             report = self.validate_citations(citations, retrieved_chunks)
 
             # ── Step 4: Link citations to source chunks ──────────────
-            source_chunks = self.link_citations_to_chunks(
-                citations, retrieved_chunks
-            )
+            source_chunks = self.link_citations_to_chunks(citations, retrieved_chunks)
 
             # ── Step 5: Determine if answer meets quality threshold ──
             is_valid = report.coverage_score >= self.min_citation_score
@@ -634,11 +630,11 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
                 )
 
             enforced = EnforcedAnswer(
-                answer        = answer,
-                citations     = citations,
-                report        = report,
-                is_valid      = is_valid,
-                source_chunks = source_chunks,
+                answer=answer,
+                citations=citations,
+                report=report,
+                is_valid=is_valid,
+                source_chunks=source_chunks,
             )
 
             logger.info(
@@ -653,6 +649,4 @@ Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
         except ValueError:
             raise
         except Exception as e:
-            raise RuntimeError(
-                f"Citation enforcement failed: {e}"
-            ) from e
+            raise RuntimeError(f"Citation enforcement failed: {e}") from e

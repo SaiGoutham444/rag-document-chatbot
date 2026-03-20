@@ -165,8 +165,13 @@ class TestGetDocumentInfo:
     def test_contains_required_keys(self, sample_docs):
         """get_document_info() must contain all required keys."""
         info = get_document_info(sample_docs)
-        required = ["source_name", "file_type", "total_sections",
-                    "total_words", "total_chars"]
+        required = [
+            "source_name",
+            "file_type",
+            "total_sections",
+            "total_words",
+            "total_chars",
+        ]
         for key in required:
             assert key in info, f"Missing key: {key}"
 

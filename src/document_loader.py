@@ -5,7 +5,6 @@ Loads PDF, DOCX, TXT, CSV, and HTML files into standardized
 LangChain Document objects with full source metadata.
 """
 
-import os
 import re
 from pathlib import Path
 from typing import List, Dict
@@ -116,9 +115,7 @@ def load_pdf(file_path: Path) -> List[Document]:
         raw_pages = loader.load()
 
         if not raw_pages:
-            raise ValueError(
-                f"'{file_path.name}' appears to have no pages."
-            )
+            raise ValueError(f"'{file_path.name}' appears to have no pages.")
 
         total_pages = len(raw_pages)
         file_size_kb = round(file_path.stat().st_size / 1024, 1)
@@ -137,16 +134,18 @@ def load_pdf(file_path: Path) -> List[Document]:
             # Convert 0-indexed page to 1-indexed for citations
             page_number = raw_doc.metadata.get("page", 0) + 1
 
-            enriched_docs.append(Document(
-                page_content=content,
-                metadata={
-                    "source": file_path.name,
-                    "page": page_number,
-                    "file_type": "pdf",
-                    "total_pages": total_pages,
-                    "file_size_kb": file_size_kb,
-                }
-            ))
+            enriched_docs.append(
+                Document(
+                    page_content=content,
+                    metadata={
+                        "source": file_path.name,
+                        "page": page_number,
+                        "file_type": "pdf",
+                        "total_pages": total_pages,
+                        "file_size_kb": file_size_kb,
+                    },
+                )
+            )
 
         if empty_page_count > 0:
             logger.warning(
@@ -196,9 +195,7 @@ def load_docx(file_path: Path) -> List[Document]:
         raw_docs = loader.load()
 
         if not raw_docs or not raw_docs[0].page_content.strip():
-            raise ValueError(
-                f"'{file_path.name}' appears to be empty or image-only."
-            )
+            raise ValueError(f"'{file_path.name}' appears to be empty or image-only.")
 
         file_size_kb = round(file_path.stat().st_size / 1024, 1)
         content = raw_docs[0].page_content.strip()
@@ -212,7 +209,7 @@ def load_docx(file_path: Path) -> List[Document]:
                 "file_type": "docx",
                 "file_size_kb": file_size_kb,
                 "word_count": word_count,
-            }
+            },
         )
 
         logger.info(
@@ -289,7 +286,7 @@ def load_txt(file_path: Path) -> List[Document]:
                 "file_type": "txt",
                 "file_size_kb": file_size_kb,
                 "line_count": line_count,
-            }
+            },
         )
 
         logger.info(
@@ -302,9 +299,7 @@ def load_txt(file_path: Path) -> List[Document]:
         raise
 
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load TXT '{file_path.name}': {str(e)}"
-        ) from e
+        raise RuntimeError(f"Failed to load TXT '{file_path.name}': {str(e)}") from e
 
 
 def load_csv(file_path: Path) -> List[Document]:
@@ -329,9 +324,7 @@ def load_csv(file_path: Path) -> List[Document]:
         df = pd.read_csv(str(file_path), encoding_errors="replace")
 
         if df.empty:
-            raise ValueError(
-                f"'{file_path.name}' contains no data rows."
-            )
+            raise ValueError(f"'{file_path.name}' contains no data rows.")
 
         file_size_kb = round(file_path.stat().st_size / 1024, 1)
         column_names = list(df.columns)
@@ -350,22 +343,22 @@ def load_csv(file_path: Path) -> List[Document]:
 
             row_text = " | ".join(row_parts)
 
-            docs.append(Document(
-                page_content=row_text,
-                metadata={
-                    "source": file_path.name,
-                    "page": 1,
-                    "file_type": "csv",
-                    "row_number": int(row_index) + 2,
-                    "columns": column_names,
-                    "file_size_kb": file_size_kb,
-                }
-            ))
+            docs.append(
+                Document(
+                    page_content=row_text,
+                    metadata={
+                        "source": file_path.name,
+                        "page": 1,
+                        "file_type": "csv",
+                        "row_number": int(row_index) + 2,
+                        "columns": column_names,
+                        "file_size_kb": file_size_kb,
+                    },
+                )
+            )
 
         if not docs:
-            raise ValueError(
-                f"No valid data rows found in '{file_path.name}'."
-            )
+            raise ValueError(f"No valid data rows found in '{file_path.name}'.")
 
         logger.info(
             f"Loaded CSV: '{file_path.name}' | "
@@ -377,9 +370,7 @@ def load_csv(file_path: Path) -> List[Document]:
         raise
 
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load CSV '{file_path.name}': {str(e)}"
-        ) from e
+        raise RuntimeError(f"Failed to load CSV '{file_path.name}': {str(e)}") from e
 
 
 def load_html(file_path: Path) -> List[Document]:
@@ -435,7 +426,7 @@ def load_html(file_path: Path) -> List[Document]:
                 "file_type": "html",
                 "file_size_kb": file_size_kb,
                 "word_count": word_count,
-            }
+            },
         )
 
         logger.info(
@@ -448,9 +439,7 @@ def load_html(file_path: Path) -> List[Document]:
         raise
 
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load HTML '{file_path.name}': {str(e)}"
-        ) from e
+        raise RuntimeError(f"Failed to load HTML '{file_path.name}': {str(e)}") from e
 
 
 def _html_regex_fallback(file_path: Path) -> str:
@@ -467,7 +456,9 @@ def _html_regex_fallback(file_path: Path) -> str:
     raw = file_path.read_text(encoding="utf-8", errors="replace")
 
     # Remove script blocks
-    raw = re.sub(r"<script[^>]*>.*?</script>", " ", raw, flags=re.DOTALL | re.IGNORECASE)
+    raw = re.sub(
+        r"<script[^>]*>.*?</script>", " ", raw, flags=re.DOTALL | re.IGNORECASE
+    )
 
     # Remove style blocks
     raw = re.sub(r"<style[^>]*>.*?</style>", " ", raw, flags=re.DOTALL | re.IGNORECASE)
@@ -477,8 +468,12 @@ def _html_regex_fallback(file_path: Path) -> str:
 
     # Decode common HTML entities
     entity_map = {
-        "&amp;": "&", "&lt;": "<", "&gt;": ">",
-        "&nbsp;": " ", "&#39;": "'", "&quot;": '"',
+        "&amp;": "&",
+        "&lt;": "<",
+        "&gt;": ">",
+        "&nbsp;": " ",
+        "&#39;": "'",
+        "&quot;": '"',
     }
     for entity, replacement in entity_map.items():
         raw = raw.replace(entity, replacement)

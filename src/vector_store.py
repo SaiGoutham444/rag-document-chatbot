@@ -14,21 +14,22 @@ Key concepts:
   Query      : embed a question → find nearest vectors → return chunks
 """
 
-import time                              # Timing operations
-from typing import List, Tuple, Optional, Dict, Any   # Type hints
+import time  # Timing operations
+from typing import List, Tuple, Optional, Dict, Any  # Type hints
 
-import chromadb                          # The vector database
-from chromadb.config import Settings     # ChromaDB configuration options
+import chromadb  # The vector database
+from chromadb.config import Settings  # ChromaDB configuration options
 from langchain_core.documents import Document
 from loguru import logger
 
-from src.config import CHROMA_DB_PATH    # Path where ChromaDB saves files
-from src.embeddings import get_embedding_model, embed_texts, embed_query
+from src.config import CHROMA_DB_PATH  # Path where ChromaDB saves files
+from src.embeddings import embed_texts, embed_query
 
 
 # ══════════════════════════════════════════════════════════════════
 # CHROMADB CLIENT
 # ══════════════════════════════════════════════════════════════════
+
 
 def get_chroma_client() -> chromadb.PersistentClient:
     """
@@ -55,7 +56,7 @@ def get_chroma_client() -> chromadb.PersistentClient:
                 # anonymized_telemetry: ChromaDB sends usage stats by default
                 # We disable this for privacy
                 anonymized_telemetry=False,
-            )
+            ),
         )
 
         logger.info("ChromaDB client ready")
@@ -73,6 +74,7 @@ def get_chroma_client() -> chromadb.PersistentClient:
 # A Collection = one set of embedded documents
 # We use one collection per uploaded document
 # ══════════════════════════════════════════════════════════════════
+
 
 def get_collection_name(source_name: str) -> str:
     """
@@ -130,9 +132,7 @@ def collection_exists(client: chromadb.PersistentClient, source_name: str) -> bo
         existing = [col.name for col in client.list_collections()]
 
         exists = collection_name in existing
-        logger.info(
-            f"Collection '{collection_name}' exists: {exists}"
-        )
+        logger.info(f"Collection '{collection_name}' exists: {exists}")
         return exists
 
     except Exception as e:
@@ -171,15 +171,14 @@ def create_or_load_collection(
         collection = client.get_or_create_collection(
             name=collection_name,
             metadata={
-                "source"     : source_name,
+                "source": source_name,
                 "description": f"Embeddings for document: {source_name}",
-            }
+            },
         )
 
         count = collection.count()
         logger.info(
-            f"Collection '{collection_name}' ready | "
-            f"Existing documents: {count}"
+            f"Collection '{collection_name}' ready | " f"Existing documents: {count}"
         )
         return collection
 
@@ -243,18 +242,18 @@ def get_collection_info(
 
         if not exists:
             return {
-                "collection_name" : collection_name,
-                "document_count"  : 0,
-                "exists"          : False,
+                "collection_name": collection_name,
+                "document_count": 0,
+                "exists": False,
             }
 
         collection = client.get_collection(collection_name)
         count = collection.count()
 
         return {
-            "collection_name" : collection_name,
-            "document_count"  : count,
-            "exists"          : True,
+            "collection_name": collection_name,
+            "document_count": count,
+            "exists": True,
         }
 
     except Exception as e:
@@ -265,6 +264,7 @@ def get_collection_info(
 # ══════════════════════════════════════════════════════════════════
 # ADDING DOCUMENTS TO THE STORE
 # ══════════════════════════════════════════════════════════════════
+
 
 def add_documents_to_store(
     chunks: List[Document],
@@ -323,8 +323,10 @@ def add_documents_to_store(
         texts = [chunk.page_content for chunk in chunks]
 
         # Unique IDs for each chunk — ChromaDB requires unique string IDs
-        ids = [chunk.metadata.get("chunk_id", f"chunk_{i}")
-               for i, chunk in enumerate(chunks)]
+        ids = [
+            chunk.metadata.get("chunk_id", f"chunk_{i}")
+            for i, chunk in enumerate(chunks)
+        ]
 
         # Metadata for each chunk — stored alongside the vector
         # ChromaDB only accepts: str, int, float, bool values in metadata
@@ -371,14 +373,13 @@ def add_documents_to_store(
     except ValueError:
         raise
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to add documents to vector store: {e}"
-        ) from e
+        raise RuntimeError(f"Failed to add documents to vector store: {e}") from e
 
 
 # ══════════════════════════════════════════════════════════════════
 # QUERYING THE STORE
 # ══════════════════════════════════════════════════════════════════
+
 
 def query_vector_store(
     query: str,
@@ -426,9 +427,7 @@ def query_vector_store(
                 f"Call add_documents_to_store() before querying."
             )
 
-        collection = client.get_collection(
-            get_collection_name(source_name)
-        )
+        collection = client.get_collection(get_collection_name(source_name))
 
         logger.info(
             f"Querying vector store | "
@@ -443,7 +442,7 @@ def query_vector_store(
         # n_results: how many to return
         # include: what data to include in response
         results = collection.query(
-            query_embeddings=[query_vector],   # wrap in list (batch query API)
+            query_embeddings=[query_vector],  # wrap in list (batch query API)
             n_results=min(top_k, collection.count()),  # can't return more than exists
             include=["documents", "metadatas", "distances"],
         )
@@ -464,9 +463,7 @@ def query_vector_store(
         # We convert to similarity: similarity = 1 - (distance / 2)
         # This gives us 1.0 for identical, 0.0 for very different
         output = []
-        for text, meta, distance in zip(
-            documents_list, metadatas_list, distances_list
-        ):
+        for text, meta, distance in zip(documents_list, metadatas_list, distances_list):
             # Convert metadata values back (ChromaDB returns strings for lists)
             similarity_score = max(0.0, 1.0 - (distance / 2.0))
 
@@ -482,13 +479,13 @@ def query_vector_store(
         logger.info(
             f"Vector search complete | "
             f"Results: {len(output)} | "
-            f"Top score: {output[0][1]:.4f}" if output else "No results"
+            f"Top score: {output[0][1]:.4f}"
+            if output
+            else "No results"
         )
         return output
 
     except ValueError:
         raise
     except Exception as e:
-        raise RuntimeError(
-            f"Vector store query failed: {e}"
-        ) from e
+        raise RuntimeError(f"Vector store query failed: {e}") from e

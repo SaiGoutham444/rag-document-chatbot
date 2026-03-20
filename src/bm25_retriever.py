@@ -16,18 +16,17 @@ Persistence:
   Loading from disk is instant vs rebuilding which scans all chunks.
 """
 
-import os                                # File path operations
-import re                                # Regex for tokenization
-import time                              # Timing index build
-import pickle                            # Serialize index to/from disk
-from pathlib import Path                 # Cross-platform paths
-from typing import List, Tuple, Optional # Type hints
+import re  # Regex for tokenization
+import time  # Timing index build
+import pickle  # Serialize index to/from disk
+from pathlib import Path  # Cross-platform paths
+from typing import List, Tuple, Optional  # Type hints
 
-from rank_bm25 import BM25Okapi          # The BM25 implementation
+from rank_bm25 import BM25Okapi  # The BM25 implementation
 from langchain_core.documents import Document
 from loguru import logger
 
-from src.config import BM25_INDEX_PATH   # Where to save index files
+from src.config import BM25_INDEX_PATH  # Where to save index files
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -35,6 +34,7 @@ from src.config import BM25_INDEX_PATH   # Where to save index files
 # BM25 works on TOKENS (individual words), not raw text
 # We must tokenize both the corpus AND queries the same way
 # ══════════════════════════════════════════════════════════════════
+
 
 def tokenize(text: str) -> List[str]:
     """
@@ -69,8 +69,7 @@ def tokenize(text: str) -> List[str]:
     if not text:
         return []
     # Insert spaces between camelCase words (e.g. "QuarterlyRevenue" → "Quarterly Revenue")
-    import re
-    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
     # Step 1: Convert to lowercase
     text = text.lower()
 
@@ -85,19 +84,69 @@ def tokenize(text: str) -> List[str]:
     # Step 4 & 5: Filter short tokens and stop words
     # Common English stop words that add noise without meaning
     STOP_WORDS = {
-        "the", "is", "at", "which", "on", "a", "an", "and", "or",
-        "but", "in", "with", "to", "of", "for", "as", "by", "from",
-        "be", "was", "are", "were", "been", "has", "have", "had",
-        "do", "does", "did", "will", "would", "could", "should",
-        "may", "might", "this", "that", "these", "those", "it",
-        "its", "we", "our", "you", "your", "they", "their", "he",
-        "she", "his", "her", "not", "no", "so", "if", "then",
+        "the",
+        "is",
+        "at",
+        "which",
+        "on",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "in",
+        "with",
+        "to",
+        "of",
+        "for",
+        "as",
+        "by",
+        "from",
+        "be",
+        "was",
+        "are",
+        "were",
+        "been",
+        "has",
+        "have",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
+        "we",
+        "our",
+        "you",
+        "your",
+        "they",
+        "their",
+        "he",
+        "she",
+        "his",
+        "her",
+        "not",
+        "no",
+        "so",
+        "if",
+        "then",
     }
 
     tokens = [
-        token for token in raw_tokens
-        if len(token) >= 2              # remove single chars
-        and token not in STOP_WORDS     # remove stop words
+        token
+        for token in raw_tokens
+        if len(token) >= 2  # remove single chars
+        and token not in STOP_WORDS  # remove stop words
     ]
 
     return tokens
@@ -106,6 +155,7 @@ def tokenize(text: str) -> List[str]:
 # ══════════════════════════════════════════════════════════════════
 # BM25 RETRIEVER CLASS
 # ══════════════════════════════════════════════════════════════════
+
 
 class BM25Retriever:
     """
@@ -160,10 +210,7 @@ class BM25Retriever:
         # Ensure the BM25 index storage directory exists
         Path(BM25_INDEX_PATH).mkdir(parents=True, exist_ok=True)
 
-        logger.info(
-            f"BM25Retriever initialized | "
-            f"Chunks: {len(chunks)}"
-        )
+        logger.info(f"BM25Retriever initialized | " f"Chunks: {len(chunks)}")
 
     def _get_index_path(self, source_name: str) -> Path:
         """
@@ -197,25 +244,21 @@ class BM25Retriever:
             RuntimeError: if tokenization or index build fails
         """
         try:
-            logger.info(
-                f"Building BM25 index for {len(self.chunks)} chunks..."
-            )
+            logger.info(f"Building BM25 index for {len(self.chunks)} chunks...")
             start_time = time.time()
 
             # Step 1: Tokenize every chunk
             # Result: list of lists — one token list per chunk
             # Example: [["revenue", "q3", "million"], ["costs", "stable"], ...]
             self.tokenized_corpus = [
-                tokenize(chunk.page_content)
-                for chunk in self.chunks
+                tokenize(chunk.page_content) for chunk in self.chunks
             ]
 
             # Log tokenization stats for debugging
             token_counts = [len(tokens) for tokens in self.tokenized_corpus]
-            avg_tokens   = sum(token_counts) / len(token_counts)
+            avg_tokens = sum(token_counts) / len(token_counts)
             logger.info(
-                f"  Tokenization complete | "
-                f"Avg tokens per chunk: {avg_tokens:.1f}"
+                f"  Tokenization complete | " f"Avg tokens per chunk: {avg_tokens:.1f}"
             )
 
             # Step 2: Build BM25Okapi index
@@ -223,8 +266,8 @@ class BM25Retriever:
             # k1=1.5, b=0.75 are the standard defaults from the original paper
             self.index = BM25Okapi(
                 self.tokenized_corpus,
-                k1=1.5,    # term frequency saturation
-                b=0.75,    # length normalization
+                k1=1.5,  # term frequency saturation
+                b=0.75,  # length normalization
             )
 
             elapsed = time.time() - start_time
@@ -235,9 +278,7 @@ class BM25Retriever:
             )
 
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to build BM25 index: {e}"
-            ) from e
+            raise RuntimeError(f"Failed to build BM25 index: {e}") from e
 
     def save_index(self, source_name: str) -> None:
         """
@@ -269,13 +310,13 @@ class BM25Retriever:
             # Build the data package to serialize
             # We save everything needed to restore full functionality
             save_data = {
-                "index"            : self.index,
-                "tokenized_corpus" : self.tokenized_corpus,
+                "index": self.index,
+                "tokenized_corpus": self.tokenized_corpus,
                 # Save chunk texts and metadata (not the full Document objects
                 # because they may not serialize cleanly across Python versions)
-                "chunk_texts"      : [c.page_content for c in self.chunks],
-                "chunk_metadatas"  : [c.metadata for c in self.chunks],
-                "num_chunks"       : len(self.chunks),
+                "chunk_texts": [c.page_content for c in self.chunks],
+                "chunk_metadatas": [c.metadata for c in self.chunks],
+                "num_chunks": len(self.chunks),
             }
 
             # Write serialized data to .pkl file
@@ -285,16 +326,13 @@ class BM25Retriever:
 
             file_size_kb = index_path.stat().st_size / 1024
             logger.info(
-                f"BM25 index saved to '{index_path}' | "
-                f"Size: {file_size_kb:.1f} KB"
+                f"BM25 index saved to '{index_path}' | " f"Size: {file_size_kb:.1f} KB"
             )
 
         except RuntimeError:
             raise
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to save BM25 index to disk: {e}"
-            ) from e
+            raise RuntimeError(f"Failed to save BM25 index to disk: {e}") from e
 
     def load_index(self, source_name: str) -> bool:
         """
@@ -333,11 +371,11 @@ class BM25Retriever:
                 save_data = pickle.load(f)
 
             # Restore the index and tokenized corpus
-            self.index             = save_data["index"]
-            self.tokenized_corpus  = save_data["tokenized_corpus"]
+            self.index = save_data["index"]
+            self.tokenized_corpus = save_data["tokenized_corpus"]
 
             # Restore chunks from saved texts and metadatas
-            chunk_texts     = save_data["chunk_texts"]
+            chunk_texts = save_data["chunk_texts"]
             chunk_metadatas = save_data["chunk_metadatas"]
 
             # Rebuild Document objects from saved components
@@ -348,8 +386,7 @@ class BM25Retriever:
 
             elapsed = time.time() - start_time
             logger.info(
-                f"BM25 index loaded in {elapsed:.3f}s | "
-                f"Chunks: {len(self.chunks)}"
+                f"BM25 index loaded in {elapsed:.3f}s | " f"Chunks: {len(self.chunks)}"
             )
             return True
 
@@ -360,9 +397,7 @@ class BM25Retriever:
                 f"rm {self._get_index_path(source_name)}"
             ) from e
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to load BM25 index: {e}"
-            ) from e
+            raise RuntimeError(f"Failed to load BM25 index: {e}") from e
 
     def index_exists_on_disk(self, source_name: str) -> bool:
         """
@@ -418,14 +453,10 @@ class BM25Retriever:
 
             # Guard: query must not be empty
             if not query or not query.strip():
-                raise ValueError(
-                    "Query cannot be empty."
-                )
+                raise ValueError("Query cannot be empty.")
 
             logger.info(
-                f"BM25 retrieval | "
-                f"Query: '{query[:60]}' | "
-                f"Top-K: {top_k}"
+                f"BM25 retrieval | " f"Query: '{query[:60]}' | " f"Top-K: {top_k}"
             )
 
             # Step 1: Tokenize query the same way as the corpus
@@ -457,13 +488,13 @@ class BM25Retriever:
             top_results = [
                 (doc, float(score))
                 for doc, score in chunk_score_pairs[:top_k]
-                if score > 0.0   # exclude chunks with zero relevance
+                if score > 0.0  # exclude chunks with zero relevance
             ]
 
             # Log results summary
             if top_results:
-                top_score   = top_results[0][1]
-                nonzero     = len(top_results)
+                top_score = top_results[0][1]
+                nonzero = len(top_results)
                 logger.info(
                     f"BM25 results: {nonzero} non-zero scored chunks | "
                     f"Top score: {top_score:.4f}"
@@ -480,9 +511,7 @@ class BM25Retriever:
         except (RuntimeError, ValueError):
             raise
         except Exception as e:
-            raise RuntimeError(
-                f"BM25 retrieval failed: {e}"
-            ) from e
+            raise RuntimeError(f"BM25 retrieval failed: {e}") from e
 
     def get_index_stats(self) -> dict:
         """
@@ -494,16 +523,16 @@ class BM25Retriever:
         """
         if self.index is None:
             return {
-                "is_built"       : False,
-                "corpus_size"    : 0,
-                "avg_doc_length" : 0.0,
+                "is_built": False,
+                "corpus_size": 0,
+                "avg_doc_length": 0.0,
             }
 
         return {
-            "is_built"       : True,
-            "corpus_size"    : len(self.chunks),
-            "avg_doc_length" : round(self.index.avgdl, 1),
-            "total_tokens"   : sum(
+            "is_built": True,
+            "corpus_size": len(self.chunks),
+            "avg_doc_length": round(self.index.avgdl, 1),
+            "total_tokens": sum(
                 len(tokens) for tokens in (self.tokenized_corpus or [])
             ),
         }
@@ -513,6 +542,7 @@ class BM25Retriever:
 # CONVENIENCE FUNCTION
 # Used by rag_pipeline.py to set up BM25 in one call
 # ══════════════════════════════════════════════════════════════════
+
 
 def build_or_load_bm25(
     chunks: List[Document],
@@ -540,14 +570,12 @@ def build_or_load_bm25(
 
     # Try loading from disk first (faster than rebuilding)
     if retriever.index_exists_on_disk(source_name):
-        success = retriever.load_index(source_name) 
+        success = retriever.load_index(source_name)
         if success:
             logger.info(f"BM25 index loaded from disk for '{source_name}'")
             return retriever
         else:
-            logger.warning(
-                f"BM25 load failed for '{source_name}', rebuilding..."
-            )
+            logger.warning(f"BM25 load failed for '{source_name}', rebuilding...")
 
     # Build fresh index and save for next time
     retriever.build_index()

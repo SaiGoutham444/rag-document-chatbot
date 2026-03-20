@@ -19,18 +19,19 @@ Model: cross-encoder/ms-marco-MiniLM-L-6-v2
   - Outputs relevance score 0.0 (irrelevant) to 1.0 (highly relevant)
 """
 
-import time                                    # Timing reranking
-from typing import List, Tuple, Optional       # Type hints
+import time  # Timing reranking
+from typing import List, Tuple, Optional  # Type hints
 
 from langchain_core.documents import Document
 from loguru import logger
 
-from src.config import RERANKER_MODEL, RERANK_TOP_K   # Model name + top-K
+from src.config import RERANKER_MODEL, RERANK_TOP_K  # Model name + top-K
 
 
 # ══════════════════════════════════════════════════════════════════
 # CROSS-ENCODER RERANKER CLASS
 # ══════════════════════════════════════════════════════════════════
+
 
 class CrossEncoderReranker:
     """
@@ -55,8 +56,8 @@ class CrossEncoderReranker:
 
     def __init__(
         self,
-        model_name : str = RERANKER_MODEL,
-        top_k      : int = RERANK_TOP_K,
+        model_name: str = RERANKER_MODEL,
+        top_k: int = RERANK_TOP_K,
     ):
         """
         Initializes the reranker with model name and settings.
@@ -71,10 +72,10 @@ class CrossEncoderReranker:
             model_name: HuggingFace model identifier
             top_k     : how many chunks to return after reranking
         """
-        self.model_name : str                    = model_name
-        self.top_k      : int                    = top_k
+        self.model_name: str = model_name
+        self.top_k: int = top_k
         # Model starts as None — loaded on first use
-        self._model                              = None
+        self._model = None
 
         logger.info(
             f"CrossEncoderReranker created | "
@@ -118,8 +119,8 @@ class CrossEncoderReranker:
             # max_length=512: maximum tokens per (query+chunk) pair
             # If combined length > 512, it truncates from the end
             self._model = CrossEncoder(
-                model_name  = self.model_name,
-                max_length  = 512,
+                model_name=self.model_name,
+                max_length=512,
             )
 
             elapsed = time.time() - start_time
@@ -149,9 +150,9 @@ class CrossEncoderReranker:
 
     def rerank(
         self,
-        query     : str,
-        documents : List[Tuple[Document, float]],
-        top_k     : Optional[int] = None,
+        query: str,
+        documents: List[Tuple[Document, float]],
+        top_k: Optional[int] = None,
     ) -> List[Tuple[Document, float]]:
         """
         Reranks documents by reading query + each chunk together.
@@ -214,10 +215,7 @@ class CrossEncoderReranker:
             # The cross-encoder expects a list of [text_a, text_b] pairs
             # text_a = the query (same for all pairs)
             # text_b = the chunk content (different for each)
-            sentence_pairs = [
-                [query, doc.page_content]
-                for doc in docs_only
-            ]
+            sentence_pairs = [[query, doc.page_content] for doc in docs_only]
 
             # ── Run cross-encoder inference ──────────────────────────
             # predict() processes all pairs in one batched forward pass
@@ -235,6 +233,7 @@ class CrossEncoderReranker:
             # Sigmoid maps them to (0.0, 1.0) for interpretability
             # sigmoid(x) = 1 / (1 + e^(-x))
             import numpy as np
+
             sigmoid_scores = 1.0 / (1.0 + np.exp(-raw_scores))
 
             # ── Pair documents with their rerank scores ───────────────
@@ -255,7 +254,7 @@ class CrossEncoderReranker:
 
                 # Add reranking info to metadata
                 doc.metadata["rerank_score"] = round(score_float, 4)
-                doc.metadata["rerank_rank"]  = rank
+                doc.metadata["rerank_rank"] = rank
 
                 # Add score label for UI color coding
                 if score_float >= 0.8:
@@ -285,16 +284,14 @@ class CrossEncoderReranker:
         except (ValueError, RuntimeError):
             raise
         except Exception as e:
-            raise RuntimeError(
-                f"Reranking failed: {e}"
-            ) from e
+            raise RuntimeError(f"Reranking failed: {e}") from e
 
     def rerank_with_threshold(
         self,
-        query     : str,
-        documents : List[Tuple[Document, float]],
-        threshold : float = 0.3,
-        top_k     : Optional[int] = None,
+        query: str,
+        documents: List[Tuple[Document, float]],
+        threshold: float = 0.3,
+        top_k: Optional[int] = None,
     ) -> List[Tuple[Document, float]]:
         """
         Reranks and filters out chunks below a relevance threshold.
@@ -321,10 +318,7 @@ class CrossEncoderReranker:
         results = self.rerank(query, documents, top_k)
 
         # Filter below threshold
-        filtered = [
-            (doc, score) for doc, score in results
-            if score >= threshold
-        ]
+        filtered = [(doc, score) for doc, score in results if score >= threshold]
 
         # Always return at least 1 result so LLM has context
         # to say "I cannot find this information"
@@ -352,7 +346,7 @@ class CrossEncoderReranker:
             Dict with model_name, is_loaded, top_k
         """
         return {
-            "model_name" : self.model_name,
-            "is_loaded"  : self._model is not None,
-            "top_k"      : self.top_k,
+            "model_name": self.model_name,
+            "is_loaded": self._model is not None,
+            "top_k": self.top_k,
         }
