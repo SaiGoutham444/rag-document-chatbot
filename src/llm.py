@@ -147,27 +147,32 @@ def _get_groq_llm():
         RuntimeError: connection fails
     """
     try:
+        # Use direct Groq client instead of LangChain wrapper
+        # to avoid torch.classes conflict on Streamlit Cloud
         from langchain_groq import ChatGroq
 
         if not GROQ_API_KEY:
             raise ValueError(
                 "GROQ_API_KEY is missing in .env\n"
-                "Get your FREE key: https://console.groq.com\n"
-                "Then set LLM_PROVIDER=groq in .env"
+                "Get your FREE key: https://console.groq.com"
             )
 
+        # Set environment variable explicitly before init
+        import os
+        os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+
         llm = ChatGroq(
-            model=GROQ_LLM_MODEL,  # "llama3-70b-8192"
-            temperature=LLM_TEMPERATURE,  # 0.1
-            max_tokens=LLM_MAX_TOKENS,  # 1024
-            groq_api_key=GROQ_API_KEY,
+            model        = GROQ_LLM_MODEL,
+            temperature  = LLM_TEMPERATURE,
+            max_tokens   = LLM_MAX_TOKENS,
+            groq_api_key = GROQ_API_KEY,
+            # Disable streaming on cloud to avoid timeout
+            streaming    = False,
         )
 
         logger.info(
-            f"Groq LLM ready | "
-            f"Model: {GROQ_LLM_MODEL} | "
-            f"Temperature: {LLM_TEMPERATURE} | "
-            f"Context limit: {CONTEXT_WINDOW_LIMITS.get(GROQ_LLM_MODEL, 8192)} tokens"
+            f"Groq LLM ready | Model: {GROQ_LLM_MODEL} | "
+            f"Temperature: {LLM_TEMPERATURE}"
         )
         return llm
 
@@ -175,7 +180,6 @@ def _get_groq_llm():
         raise
     except Exception as e:
         raise RuntimeError(f"Failed to initialize Groq LLM: {e}") from e
-
 
 def _get_local_llm():
     """
