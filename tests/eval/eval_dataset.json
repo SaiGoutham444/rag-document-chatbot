@@ -1,0 +1,72 @@
+[
+  {
+    "question": "What is the candidate's career objective?",
+    "ground_truth": "The candidate is an enthusiastic Computer Science undergraduate eager to contribute to innovative teams, committed to leveraging technical expertise in software development and AI/ML.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "personal_info"
+  },
+  {
+    "question": "What programming languages does the candidate know?",
+    "ground_truth": "The candidate knows Java, JavaScript, HTML, CSS, JSP, and JDBC at beginner level, and SQL at beginner level.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "technical_skills"
+  },
+  {
+    "question": "What is the candidate's CGPA?",
+    "ground_truth": "The candidate has a CGPA of 9.20 up to the 3rd semester.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "education"
+  },
+  {
+    "question": "What database tools does the candidate use?",
+    "ground_truth": "The candidate uses SQL with basic understanding of relational databases.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "technical_skills"
+  },
+  {
+    "question": "What development tools does the candidate use?",
+    "ground_truth": "The candidate uses VS Code and Git as development tools and platforms.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "technical_skills"
+  },
+  {
+    "question": "What AI project did the candidate build?",
+    "ground_truth": "The candidate built an AI Chatbot using the Gemini API and JavaScript, capable of understanding and responding to natural language queries.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "projects"
+  },
+  {
+    "question": "What web technologies does the candidate know?",
+    "ground_truth": "The candidate knows web technologies including APIs, DOM manipulation, and responsive design.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "technical_skills"
+  },
+  {
+    "question": "Where did the candidate complete their schooling?",
+    "ground_truth": "The candidate completed SSC 10th standard at Krishnaveni Talent School in Warangal, Telangana with CGPA 10/10.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "education"
+  },
+  {
+    "question": "What certifications does the candidate have?",
+    "ground_truth": "The candidate has certifications in Problem Solving through Programming and Java from NPTEL.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "certifications"
+  },
+  {
+    "question": "What is the candidate's contact information?",
+    "ground_truth": "The candidate's contact information includes phone +91-9381299292, email saigoutham1312@gmail.com, and location Warangal, Telangana, India.",
+    "source_document": "resume.pdf",
+    "relevant_pages": [1],
+    "category": "personal_info"
+  }
+]

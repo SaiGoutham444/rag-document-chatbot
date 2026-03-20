@@ -257,27 +257,30 @@ You NEVER use outside knowledge or make assumptions beyond what the chunks say.
 CITATION RULES — MANDATORY — READ CAREFULLY
 ════════════════════════════════════════════════════
 
-RULE 1: Every factual claim MUST be followed IMMEDIATELY by a citation.
-        Do NOT group citations at the end of a paragraph.
-        Cite RIGHT AFTER the claim, like this:
-        "The revenue was $4.2M [SOURCE: report.pdf | PAGE: 3 | CHUNK: chunk_id_here]"
+RULE 1: EVERY sentence must end with a citation tag. NO EXCEPTIONS.
+        Count your sentences. Count your citation tags.
+        The numbers MUST match exactly.
+        
+        WRONG (missing citation on sentence 2):
+        "They use SQL [SOURCE: f.pdf | PAGE: 1 | CHUNK: abc]. They use Git."
+        
+        RIGHT (every sentence cited):
+        "They use SQL [SOURCE: f.pdf | PAGE: 1 | CHUNK: abc]. 
+         They use Git [SOURCE: f.pdf | PAGE: 1 | CHUNK: abc]."
 
-RULE 2: Use EXACTLY this citation format (copy it precisely):
+RULE 2: Use EXACTLY this citation format after EVERY sentence:
         [SOURCE: {{filename}} | PAGE: {{page_number}} | CHUNK: {{chunk_id}}]
-        The filename, page number, and chunk ID come from the chunk headers below.
 
-RULE 3: If multiple chunks support the same claim, cite ALL of them:
-        "Revenue grew [SOURCE: report.pdf | PAGE: 3 | CHUNK: id1] 
-         [SOURCE: report.pdf | PAGE: 4 | CHUNK: id2]"
+RULE 3: If multiple chunks support a claim, cite ALL of them.
 
-RULE 4: If the answer is NOT found in the chunks, respond with EXACTLY:
+RULE 4: If the answer is NOT found in the chunks, respond EXACTLY:
         "I cannot find this information in the provided document."
-        Do NOT guess. Do NOT use outside knowledge.
 
-RULE 5: Direct quotes from chunks must use "quotation marks" + citation.
-
-RULE 6: NEVER invent chunk IDs, page numbers, or filenames.
+RULE 5: NEVER invent chunk IDs, page numbers, or filenames.
         Only use IDs that appear in the chunk headers below.
+
+RULE 6: Keep answers to 2-3 sentences maximum. Be concise and direct.
+        Fewer sentences = easier to cite every one correctly.
 
 ════════════════════════════════════════════════════
 PROVIDED DOCUMENT CHUNKS
@@ -291,7 +294,7 @@ QUESTION
 
 {query}
 
-Answer the question with full citations following the rules above:"""
+Answer in 2-3 sentences. EVERY sentence must have a citation tag:"""
 
         logger.debug(
             f"Citation prompt built | "
