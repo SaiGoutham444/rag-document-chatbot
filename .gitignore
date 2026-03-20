@@ -92,3 +92,5 @@ data/uploads/
 *.docx
 # Exception: keep the sample document for testing
 !data/sample_docs/sample.pdf
+
+echo ".streamlit/secrets.toml" >> .gitignore
