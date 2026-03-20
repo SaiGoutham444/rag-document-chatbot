@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════════════════════════
+# eval_gate.yml — Scheduled Eval + Matrix Testing
+# Runs full evaluation on a schedule (not just PRs)
+# Also tests across Python versions
+# ═══════════════════════════════════════════════════════════════
+
+name: Eval Gate (Scheduled)
+
+
+# NEW — remove the type field entirely, use string default
+on:
+  schedule:
+    - cron: '0 2 * * *'
+
+  workflow_dispatch:
+    inputs:
+      fast_mode:
+        description: 'Run fast eval (3 questions only)'
+        required: false
+        default: 'true'
+
+jobs:
+  full-eval:
+    name: Full RAG Evaluation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Create .env
+        run: |
+          echo "LLM_PROVIDER=groq"              >> .env
+          echo "EMBEDDING_PROVIDER=local"        >> .env
+          echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
+          echo "CHROMA_DB_PATH=./chroma_db"      >> .env
+          echo "BM25_INDEX_PATH=./bm25_index"    >> .env
+          echo "RETRIEVAL_TOP_K=20"              >> .env
+          echo "RERANK_TOP_K=3"                  >> .env
+
+      # Run full eval (all 10 questions)
+      - name: Run full evaluation
+        run: |
+          python tests/eval/run_evals.py \
+            --doc data/sample_docs/resume.pdf \
+            --output eval_report_full.json
+
+      - name: Upload full eval report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-eval-report-${{ github.run_number }}
+          path: eval_report_full.json
+          retention-days: 90
