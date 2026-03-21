@@ -31,6 +31,7 @@ from src.config import (
 # LLM FACTORY
 # ══════════════════════════════════════════════════════════════════
 
+
 def get_llm(provider: Optional[str] = None):
     """
     Factory function — returns configured LLM instance.
@@ -83,11 +84,11 @@ def _get_openai_llm():
             )
 
         llm = ChatOpenAI(
-            model          = OPENAI_LLM_MODEL,
-            temperature    = LLM_TEMPERATURE,
-            max_tokens     = LLM_MAX_TOKENS,
-            openai_api_key = OPENAI_API_KEY,
-            streaming      = True,
+            model=OPENAI_LLM_MODEL,
+            temperature=LLM_TEMPERATURE,
+            max_tokens=LLM_MAX_TOKENS,
+            openai_api_key=OPENAI_API_KEY,
+            streaming=True,
         )
 
         logger.info(
@@ -159,10 +160,10 @@ def _get_groq_llm():
 
         # ── STEP 3: Initialize the LLM
         llm = ChatGroq(
-            model        = GROQ_LLM_MODEL,
-            temperature  = LLM_TEMPERATURE,
-            max_tokens   = LLM_MAX_TOKENS,
-            groq_api_key = GROQ_API_KEY,
+            model=GROQ_LLM_MODEL,
+            temperature=LLM_TEMPERATURE,
+            max_tokens=LLM_MAX_TOKENS,
+            groq_api_key=GROQ_API_KEY,
         )
 
         logger.info(
@@ -201,8 +202,8 @@ def _get_local_llm():
         from langchain_community.chat_models import ChatOllama
 
         llm = ChatOllama(
-            model       = "mistral",
-            temperature = LLM_TEMPERATURE,
+            model="mistral",
+            temperature=LLM_TEMPERATURE,
         )
 
         logger.info(
@@ -228,10 +229,11 @@ def _get_local_llm():
 # ANSWER GENERATION
 # ══════════════════════════════════════════════════════════════════
 
+
 def generate_answer(
     llm,
-    prompt : str,
-    stream : bool = False,
+    prompt: str,
+    stream: bool = False,
 ) -> str:
     """
     Sends a prompt to the LLM and returns the complete response.
@@ -267,10 +269,10 @@ def generate_answer(
                 print(token, end="", flush=True)
             print()
         else:
-            response      = llm.invoke(prompt)
+            response = llm.invoke(prompt)
             full_response = response.content
 
-        elapsed         = time.time() - start_time
+        elapsed = time.time() - start_time
         response_tokens = len(full_response.split()) * 1.3
 
         logger.info(
@@ -325,10 +327,7 @@ def generate_answer_stream(
         if not prompt or not prompt.strip():
             raise ValueError("Prompt cannot be empty.")
 
-        logger.info(
-            f"Starting streaming generation | "
-            f"Prompt: {len(prompt)} chars"
-        )
+        logger.info(f"Starting streaming generation | " f"Prompt: {len(prompt)} chars")
 
         for chunk in llm.stream(prompt):
             if chunk.content:
@@ -342,6 +341,7 @@ def generate_answer_stream(
 # ══════════════════════════════════════════════════════════════════
 # TOKEN COUNTING UTILITIES
 # ══════════════════════════════════════════════════════════════════
+
 
 def count_tokens(text: str, model: str = "gpt-4o-mini") -> int:
     """
@@ -374,9 +374,9 @@ def count_tokens(text: str, model: str = "gpt-4o-mini") -> int:
 
 
 def check_context_fits(
-    prompt        : str,
-    model         : str = GROQ_LLM_MODEL,
-    safety_margin : int = 500,
+    prompt: str,
+    model: str = GROQ_LLM_MODEL,
+    safety_margin: int = 500,
 ) -> bool:
     """
     Checks if a prompt fits within a model's context window.
@@ -392,7 +392,7 @@ def check_context_fits(
     """
     context_limit = CONTEXT_WINDOW_LIMITS.get(model, 8192)
     prompt_tokens = count_tokens(prompt, model)
-    fits          = (prompt_tokens + safety_margin) <= context_limit
+    fits = (prompt_tokens + safety_margin) <= context_limit
 
     logger.info(
         f"Context check | "
@@ -422,13 +422,12 @@ def test_llm_connection(provider: Optional[str] = None) -> bool:
         True if connected, False if failed
     """
     try:
-        llm      = get_llm(provider)
+        llm = get_llm(provider)
         response = generate_answer(llm, "Say 'OK' and nothing else.")
 
         if response and len(response.strip()) > 0:
             logger.info(
-                f"LLM connection test passed | "
-                f"Response: '{response.strip()[:50]}'"
+                f"LLM connection test passed | " f"Response: '{response.strip()[:50]}'"
             )
             return True
         else:
